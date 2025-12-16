@@ -46,93 +46,6 @@ services:
       timeout: 10s
       retries: 5
 
-  # PostgreSQL Database for Booking Service
-  booking-db:
-    image: postgres:16-alpine
-    container_name: pms-booking-db
-    environment:
-      POSTGRES_DB: ${BOOKING_DB_NAME:-booking_db}
-      POSTGRES_USER: ${BOOKING_DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${BOOKING_DB_PASSWORD:-postgres123}
-      POSTGRES_HOST_AUTH_METHOD: md5
-      POSTGRES_INITDB_ARGS: "--auth-host=md5"
-    ports:
-      - "${BOOKING_DB_PORT:-5432}:5432"
-    volumes:
-      - booking-db-data:/var/lib/postgresql/data
-    networks:
-      - pms-network
-    command:
-      - "postgres"
-      - "-c"
-      - "listen_addresses=*"
-      - "-c"
-      - "max_connections=200"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${BOOKING_DB_USER:-postgres}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
-  # PostgreSQL Database for Invoice Service
-  invoice-db:
-    image: postgres:16-alpine
-    container_name: pms-invoice-db
-    environment:
-      POSTGRES_DB: ${INVOICE_DB_NAME:-invoice_db}
-      POSTGRES_USER: ${INVOICE_DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${INVOICE_DB_PASSWORD:-postgres123}
-      POSTGRES_HOST_AUTH_METHOD: md5
-      POSTGRES_INITDB_ARGS: "--auth-host=md5"
-    ports:
-      - "${INVOICE_DB_PORT:-5433}:5432"
-    volumes:
-      - invoice-db-data:/var/lib/postgresql/data
-    networks:
-      - pms-network
-    command:
-      - "postgres"
-      - "-c"
-      - "listen_addresses=*"
-      - "-c"
-      - "max_connections=200"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${INVOICE_DB_USER:-postgres}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
-  # PostgreSQL Database for Site Service
-  site-db:
-    image: postgres:16-alpine
-    container_name: pms-site-db
-    environment:
-      POSTGRES_DB: ${SITE_DB_NAME:-site_db}
-      POSTGRES_USER: ${SITE_DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${SITE_DB_PASSWORD:-postgres123}
-      POSTGRES_HOST_AUTH_METHOD: md5
-      POSTGRES_INITDB_ARGS: "--auth-host=md5"
-    ports:
-      - "${SITE_DB_PORT:-5434}:5432"
-    volumes:
-      - site-db-data:/var/lib/postgresql/data
-    networks:
-      - pms-network
-    command:
-      - "postgres"
-      - "-c"
-      - "listen_addresses=*"
-      - "-c"
-      - "max_connections=200"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${SITE_DB_USER:-postgres}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
   # Application Services
 
   # Booking API Service
@@ -142,8 +55,6 @@ services:
       dockerfile: Booking.API/Dockerfile
     container_name: pms-booking-api
     depends_on:
-      booking-db:
-        condition: service_healthy
       kafka:
         condition: service_healthy
     ports:
@@ -152,7 +63,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT:-Development}
       - ASPNETCORE_URLS=http://+:8080;https://+:8081
-      - ConnectionStrings__DefaultConnection=Host=booking-db;Port=5432;Database=${BOOKING_DB_NAME:-booking_db};Username=${BOOKING_DB_USER:-postgres};Password=${BOOKING_DB_PASSWORD:-postgres123}
+      - ConnectionStrings__DefaultConnection=${BOOKING_DB_CONNECTION}
       - Kafka__BootstrapServers=kafka:9092
       - Kafka__GroupId=booking-service
     networks:
@@ -172,8 +83,6 @@ services:
       dockerfile: Invoice.API/Dockerfile
     container_name: pms-invoice-api
     depends_on:
-      invoice-db:
-        condition: service_healthy
       kafka:
         condition: service_healthy
     ports:
@@ -182,7 +91,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT:-Development}
       - ASPNETCORE_URLS=http://+:8080;https://+:8081
-      - ConnectionStrings__DefaultConnection=Host=invoice-db;Port=5432;Database=${INVOICE_DB_NAME:-invoice_db};Username=${INVOICE_DB_USER:-postgres};Password=${INVOICE_DB_PASSWORD:-postgres123}
+      - ConnectionStrings__DefaultConnection=${INVOICE_DB_CONNECTION}
       - Kafka__BootstrapServers=kafka:9092
       - Kafka__GroupId=invoice-service
     networks:
@@ -202,8 +111,6 @@ services:
       dockerfile: Site.API/Dockerfile
     container_name: pms-site-api
     depends_on:
-      site-db:
-        condition: service_healthy
       kafka:
         condition: service_healthy
     ports:
@@ -212,7 +119,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT:-Development}
       - ASPNETCORE_URLS=http://+:8080;https://+:8081
-      - ConnectionStrings__DefaultConnection=Host=site-db;Port=5432;Database=${SITE_DB_NAME:-site_db};Username=${SITE_DB_USER:-postgres};Password=${SITE_DB_PASSWORD:-postgres123}
+      - ConnectionStrings__DefaultConnection=${SITE_DB_CONNECTION}
       - Kafka__BootstrapServers=kafka:9092
       - Kafka__GroupId=site-service
     networks:
@@ -230,10 +137,4 @@ networks:
     driver: bridge
     name: pms-network
 
-volumes:
-  booking-db-data:
-    name: pms-booking-db-data
-  invoice-db-data:
-    name: pms-invoice-db-data
-  site-db-data:
-    name: pms-site-db-data
+volumes: {}
