@@ -54,17 +54,26 @@ services:
       POSTGRES_DB: ${BOOKING_DB_NAME:-booking_db}
       POSTGRES_USER: ${BOOKING_DB_USER:-postgres}
       POSTGRES_PASSWORD: ${BOOKING_DB_PASSWORD:-postgres123}
+      POSTGRES_HOST_AUTH_METHOD: md5
+      POSTGRES_INITDB_ARGS: "--auth-host=md5"
     ports:
-      - "5432:5432"
+      - "${BOOKING_DB_PORT:-5432}:5432"
     volumes:
       - booking-db-data:/var/lib/postgresql/data
     networks:
       - pms-network
+    command:
+      - "postgres"
+      - "-c"
+      - "listen_addresses=*"
+      - "-c"
+      - "max_connections=200"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${BOOKING_DB_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   # PostgreSQL Database for Invoice Service
   invoice-db:
@@ -74,17 +83,26 @@ services:
       POSTGRES_DB: ${INVOICE_DB_NAME:-invoice_db}
       POSTGRES_USER: ${INVOICE_DB_USER:-postgres}
       POSTGRES_PASSWORD: ${INVOICE_DB_PASSWORD:-postgres123}
+      POSTGRES_HOST_AUTH_METHOD: md5
+      POSTGRES_INITDB_ARGS: "--auth-host=md5"
     ports:
-      - "5433:5432"
+      - "${INVOICE_DB_PORT:-5433}:5432"
     volumes:
       - invoice-db-data:/var/lib/postgresql/data
     networks:
       - pms-network
+    command:
+      - "postgres"
+      - "-c"
+      - "listen_addresses=*"
+      - "-c"
+      - "max_connections=200"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${INVOICE_DB_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   # PostgreSQL Database for Site Service
   site-db:
@@ -94,17 +112,26 @@ services:
       POSTGRES_DB: ${SITE_DB_NAME:-site_db}
       POSTGRES_USER: ${SITE_DB_USER:-postgres}
       POSTGRES_PASSWORD: ${SITE_DB_PASSWORD:-postgres123}
+      POSTGRES_HOST_AUTH_METHOD: md5
+      POSTGRES_INITDB_ARGS: "--auth-host=md5"
     ports:
-      - "5434:5432"
+      - "${SITE_DB_PORT:-5434}:5432"
     volumes:
       - site-db-data:/var/lib/postgresql/data
     networks:
       - pms-network
+    command:
+      - "postgres"
+      - "-c"
+      - "listen_addresses=*"
+      - "-c"
+      - "max_connections=200"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${SITE_DB_USER:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U ${INVOICE_DB_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   # Application Services
 
