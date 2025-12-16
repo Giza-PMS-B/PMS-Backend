@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>2fadf175-2b9e-4b7f-9f4f-0918b04b7912</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ServiceTemplate.Application\ServiceTemplate.Application.csproj" />
+    <ProjectReference Include="..\SharedKernel.EventDriven.Abstraction\SharedKernel.EventDriven.Abstraction.csproj" />
+    <ProjectReference Include="..\SharedKernel.EventDriven\SharedKernel.EventDriven.csproj" />
+    <ProjectReference Include="..\SharedKernel.Infratsrucrure.Persistent\SharedKernel.Infratsrucrure.Persistent.csproj" />
+    <ProjectReference Include="..\SharedKernel.MessageBus.Kafka\SharedKernel.MessageBus.Kafka.csproj" />
+  </ItemGroup>
+
+</Project>

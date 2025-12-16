@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
+    <PackageReference Include="Npgsql" Version="8.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SharedKernel.EventDriven.Abstraction\SharedKernel.EventDriven.Abstraction.csproj" />
+    <ProjectReference Include="..\SharedKernel.Infratsrucrure.Persistent.Abstraction\SharedKernel.Infratsrucrure.Persistent.Abstraction.csproj" />
+    <ProjectReference Include="..\SharedKernel.MessageBus.Abstraction\SharedKernel.MessageBus.Abstraction.csproj" />
+  </ItemGroup>
+
+</Project>
