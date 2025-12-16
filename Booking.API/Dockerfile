@@ -7,9 +7,8 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
-COPY ["global.json", "./"]
-RUN echo '{"sdk":{"version":"8.0.0","rollForward":"latestMinor"}}' > global.json
 COPY ["PMS.sln", "./"]
+COPY ["global.json", "./"]
 COPY ["Booking.API/Booking.API.csproj", "Booking.API/"]
 COPY ["Booking.Application/Booking.Application.csproj", "Booking.Application/"]
 COPY ["Booking.Infrastrcure.Persistent/Booking.Infrastrcure.Persistent.csproj", "Booking.Infrastrcure.Persistent/"]
