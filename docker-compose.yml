@@ -57,22 +57,15 @@ services:
         condition: service_healthy
     ports:
       - "5001:8080"
-      - "5011:8081"
     environment:
       - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT:-Development}
-      - ASPNETCORE_URLS=http://+:8080;https://+:8081
+      - ASPNETCORE_URLS=http://+:8080
       - ConnectionStrings__DefaultConnection=${BOOKING_DB_CONNECTION}
       - Kafka__BootstrapServers=kafka:9092
       - Kafka__GroupId=booking-service
     networks:
       - pms-network
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   # Invoice API Service
   invoice-api:
@@ -85,22 +78,15 @@ services:
         condition: service_healthy
     ports:
       - "5002:8080"
-      - "5012:8081"
     environment:
       - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT:-Development}
-      - ASPNETCORE_URLS=http://+:8080;https://+:8081
+      - ASPNETCORE_URLS=http://+:8080
       - ConnectionStrings__DefaultConnection=${INVOICE_DB_CONNECTION}
       - Kafka__BootstrapServers=kafka:9092
       - Kafka__GroupId=invoice-service
     networks:
       - pms-network
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   # Site API Service
   site-api:
@@ -113,22 +99,15 @@ services:
         condition: service_healthy
     ports:
       - "5003:8080"
-      - "5013:8081"
     environment:
       - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT:-Development}
-      - ASPNETCORE_URLS=http://+:8080;https://+:8081
+      - ASPNETCORE_URLS=http://+:8080
       - ConnectionStrings__DefaultConnection=${SITE_DB_CONNECTION}
       - Kafka__BootstrapServers=kafka:9092
       - Kafka__GroupId=site-service
     networks:
       - pms-network
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
 networks:
   pms-network:
