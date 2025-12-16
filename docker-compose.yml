@@ -1,0 +1,212 @@
+version: '3.8'
+
+services:
+  # Infrastructure Services
+
+  # Zookeeper - Required for Kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: pms-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - pms-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Kafka Message Broker
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: pms-kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    networks:
+      - pms-network
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # PostgreSQL Database for Booking Service
+  booking-db:
+    image: postgres:16-alpine
+    container_name: pms-booking-db
+    environment:
+      POSTGRES_DB: ${BOOKING_DB_NAME:-booking_db}
+      POSTGRES_USER: ${BOOKING_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${BOOKING_DB_PASSWORD:-postgres123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - booking-db-data:/var/lib/postgresql/data
+    networks:
+      - pms-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${BOOKING_DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL Database for Invoice Service
+  invoice-db:
+    image: postgres:16-alpine
+    container_name: pms-invoice-db
+    environment:
+      POSTGRES_DB: ${INVOICE_DB_NAME:-invoice_db}
+      POSTGRES_USER: ${INVOICE_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${INVOICE_DB_PASSWORD:-postgres123}
+    ports:
+      - "5433:5432"
+    volumes:
+      - invoice-db-data:/var/lib/postgresql/data
+    networks:
+      - pms-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${INVOICE_DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL Database for Site Service
+  site-db:
+    image: postgres:16-alpine
+    container_name: pms-site-db
+    environment:
+      POSTGRES_DB: ${SITE_DB_NAME:-site_db}
+      POSTGRES_USER: ${SITE_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${SITE_DB_PASSWORD:-postgres123}
+    ports:
+      - "5434:5432"
+    volumes:
+      - site-db-data:/var/lib/postgresql/data
+    networks:
+      - pms-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SITE_DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Application Services
+
+  # Booking API Service
+  booking-api:
+    build:
+      context: .
+      dockerfile: Booking.API/Dockerfile
+    container_name: pms-booking-api
+    depends_on:
+      booking-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    ports:
+      - "5001:8080"
+      - "5011:8081"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT:-Development}
+      - ASPNETCORE_URLS=http://+:8080;https://+:8081
+      - ConnectionStrings__DefaultConnection=Host=booking-db;Port=5432;Database=${BOOKING_DB_NAME:-booking_db};Username=${BOOKING_DB_USER:-postgres};Password=${BOOKING_DB_PASSWORD:-postgres123}
+      - Kafka__BootstrapServers=kafka:9092
+      - Kafka__GroupId=booking-service
+    networks:
+      - pms-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Invoice API Service
+  invoice-api:
+    build:
+      context: .
+      dockerfile: Invoice.API/Dockerfile
+    container_name: pms-invoice-api
+    depends_on:
+      invoice-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    ports:
+      - "5002:8080"
+      - "5012:8081"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT:-Development}
+      - ASPNETCORE_URLS=http://+:8080;https://+:8081
+      - ConnectionStrings__DefaultConnection=Host=invoice-db;Port=5432;Database=${INVOICE_DB_NAME:-invoice_db};Username=${INVOICE_DB_USER:-postgres};Password=${INVOICE_DB_PASSWORD:-postgres123}
+      - Kafka__BootstrapServers=kafka:9092
+      - Kafka__GroupId=invoice-service
+    networks:
+      - pms-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Site API Service
+  site-api:
+    build:
+      context: .
+      dockerfile: Site.API/Dockerfile
+    container_name: pms-site-api
+    depends_on:
+      site-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    ports:
+      - "5003:8080"
+      - "5013:8081"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT:-Development}
+      - ASPNETCORE_URLS=http://+:8080;https://+:8081
+      - ConnectionStrings__DefaultConnection=Host=site-db;Port=5432;Database=${SITE_DB_NAME:-site_db};Username=${SITE_DB_USER:-postgres};Password=${SITE_DB_PASSWORD:-postgres123}
+      - Kafka__BootstrapServers=kafka:9092
+      - Kafka__GroupId=site-service
+    networks:
+      - pms-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  pms-network:
+    driver: bridge
+    name: pms-network
+
+volumes:
+  booking-db-data:
+    name: pms-booking-db-data
+  invoice-db-data:
+    name: pms-invoice-db-data
+  site-db-data:
+    name: pms-site-db-data
