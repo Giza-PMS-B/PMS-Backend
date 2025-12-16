@@ -7,9 +7,9 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
-COPY ["PMS.sln", "./"]
 COPY ["global.json", "./"]
-RUN sed -i 's/"latestPatch"/"latestMinor"/g' global.json
+RUN echo '{"sdk":{"version":"8.0.0","rollForward":"latestMinor"}}' > global.json
+COPY ["PMS.sln", "./"]
 COPY ["Site.API/Site.API.csproj", "Site.API/"]
 COPY ["Site.Application/Site.Application.csproj", "Site.Application/"]
 COPY ["Site.Infrastrcure.Persistent/Site.Infrastrcure.Persistent.csproj", "Site.Infrastrcure.Persistent/"]
