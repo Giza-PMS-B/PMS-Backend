@@ -5,10 +5,11 @@ EXPOSE 8081
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
-ENV DOTNET_ROLL_FORWARD=Major
 WORKDIR /src
 
 COPY ["PMS.sln", "./"]
+COPY ["global.json", "./"]
+RUN sed -i 's/"latestPatch"/"latestMinor"/g' global.json
 COPY ["Invoice.API/Invoice.API.csproj", "Invoice.API/"]
 COPY ["Invoice.Application/Invoice.Application.csproj", "Invoice.Application/"]
 COPY ["Invoice.Infrastrcure.Persistent/Invoice.Infrastrcure.Persistent.csproj", "Invoice.Infrastrcure.Persistent/"]

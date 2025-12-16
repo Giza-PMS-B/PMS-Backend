@@ -5,10 +5,11 @@ EXPOSE 8081
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
-ENV DOTNET_ROLL_FORWARD=Major
 WORKDIR /src
 
 COPY ["PMS.sln", "./"]
+COPY ["global.json", "./"]
+RUN sed -i 's/"latestPatch"/"latestMinor"/g' global.json
 COPY ["Booking.API/Booking.API.csproj", "Booking.API/"]
 COPY ["Booking.Application/Booking.Application.csproj", "Booking.Application/"]
 COPY ["Booking.Infrastrcure.Persistent/Booking.Infrastrcure.Persistent.csproj", "Booking.Infrastrcure.Persistent/"]
