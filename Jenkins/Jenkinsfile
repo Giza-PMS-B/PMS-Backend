@@ -15,10 +15,15 @@ pipeline {
 
     stages {
         stage('Checkout') {
-            steps {
-                git branch: "${BRANCH}", url: "${REPO_URL}"
-            }
-        }
+           steps {
+              git(
+                url: 'https://github.com/Giza-PMS-B/PMS-Backend.git',
+                branch: 'main',
+                credentialsId: 'GitHub-omar'
+        )
+    }
+}
+}
 
         stage('Restore & Build .NET') {
             steps {
