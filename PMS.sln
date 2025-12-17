@@ -63,6 +63,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Invoice.Model.Shared", "Inv
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Invoice.Infrastrcure.Persistent", "Invoice.Infrastrcure.Persistent\Invoice.Infrastrcure.Persistent.csproj", "{1B67FB29-3EF5-47AE-8CCB-374F8010CBAF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Site.Model", "Site.Model\Site.Model.csproj", "{8A24AD27-8AFE-4007-98EF-4741146765A4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -161,6 +163,10 @@ Global
 		{1B67FB29-3EF5-47AE-8CCB-374F8010CBAF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1B67FB29-3EF5-47AE-8CCB-374F8010CBAF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1B67FB29-3EF5-47AE-8CCB-374F8010CBAF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8A24AD27-8AFE-4007-98EF-4741146765A4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8A24AD27-8AFE-4007-98EF-4741146765A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8A24AD27-8AFE-4007-98EF-4741146765A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8A24AD27-8AFE-4007-98EF-4741146765A4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -195,5 +201,6 @@ Global
 		{DCC1277F-80C3-4B6C-BF76-19B20C6BEAA2} = {CA460614-7685-4523-BCA1-F1BF7E826DD1}
 		{FBD21618-9518-4D60-A095-9E02767753CC} = {CA460614-7685-4523-BCA1-F1BF7E826DD1}
 		{1B67FB29-3EF5-47AE-8CCB-374F8010CBAF} = {CA460614-7685-4523-BCA1-F1BF7E826DD1}
+		{8A24AD27-8AFE-4007-98EF-4741146765A4} = {976E2B35-689A-42F9-B2F2-FB02CE737352}
 	EndGlobalSection
 EndGlobal
