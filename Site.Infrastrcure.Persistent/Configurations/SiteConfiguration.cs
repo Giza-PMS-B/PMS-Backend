@@ -1,0 +1,53 @@
+using System;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Site.Model.Entities;
+
+namespace Site.Infrastrcure.Persistent.Configurations;
+
+public class SiteConfiguration : IEntityTypeConfiguration<site>
+{
+    public void Configure(EntityTypeBuilder<site> builder)
+    {
+        builder.ToTable("Sites");
+
+        builder.HasKey(site => site.Id);
+        builder.Property(site => site.IntegrationCode);
+        builder.Property(site => site.NameAr)
+        .IsRequired()
+        .HasMaxLength(100);
+
+        builder.Property(site => site.NameEn)
+        .IsRequired()
+        .HasMaxLength(100);
+
+        builder.HasIndex(s => s.NameEn)
+       .IsUnique();
+
+        builder.HasIndex(s => s.NameAr)
+               .IsUnique();
+
+        builder.Property(site => site.NumberOfSolts).IsRequired();
+        builder.Property(site => site.Path).IsRequired();
+        builder.Property(site => site.Price)
+        .IsRequired()
+        .HasColumnType("decimal(18,2)");
+
+
+        builder.Property(site => site.ParentId);
+
+        builder
+             .HasOne(s => s.Parent)
+             .WithMany(s => s.Children)
+             .HasForeignKey(s => s.ParentId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+        builder
+            .HasMany(s => s.Polygons)
+            .WithOne(p => p.Site)
+            .HasForeignKey(p => p.SiteId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+    }
+}
