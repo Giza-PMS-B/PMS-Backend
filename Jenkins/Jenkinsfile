@@ -4,7 +4,7 @@ pipeline {
     environment {
         REPO_URL = 'https://github.com/Giza-PMS-B/PMS-Backend.git'
         DEPLOY_USER = 'deploy'
-        DEPLOY_HOST = 'your.server.ip'
+        DEPLOY_HOST = '127.0.0.1'
         DEPLOY_PATH = '/var/www/pms-backend'
     }
 
