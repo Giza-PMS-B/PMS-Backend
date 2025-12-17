@@ -15,7 +15,11 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git url: "${REPO_URL}", credentialsId: 'github-pat'
+                git(
+                    url: "${REPO_URL}",
+                    branch: 'main',
+                    credentialsId: 'GitHub-omar'  // your PAT credential ID
+                )
             }
         }
 
@@ -51,5 +55,5 @@ pipeline {
             echo 'Pipeline failed. Check logs for details.'
         }
     }
-} // <- only one closing brace here for pipeline
+}
 
