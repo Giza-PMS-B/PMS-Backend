@@ -2,8 +2,7 @@ pipeline {
     agent any
 
     environment {
-        REPO_URL = 'git@github.com:Giza-PMS-B/PMS-Backend.git'
-        BRANCH = 'main'
+        REPO_URL = 'https://github.com/Giza-PMS-B/PMS-Backend.git'
         DEPLOY_USER = 'deploy'
         DEPLOY_HOST = 'your.server.ip'
         DEPLOY_PATH = '/var/www/pms-backend'
@@ -15,15 +14,10 @@ pipeline {
 
     stages {
         stage('Checkout') {
-           steps {
-              git(
-                url: 'https://github.com/Giza-PMS-B/PMS-Backend.git',
-                branch: 'main',
-                credentialsId: 'GitHub-omar'
-        )
-    }
-}
-}
+            steps {
+                git url: "${REPO_URL}", credentialsId: 'github-pat'
+            }
+        }
 
         stage('Restore & Build .NET') {
             steps {
@@ -57,5 +51,5 @@ pipeline {
             echo 'Pipeline failed. Check logs for details.'
         }
     }
-}
+} // <- only one closing brace here for pipeline
 
