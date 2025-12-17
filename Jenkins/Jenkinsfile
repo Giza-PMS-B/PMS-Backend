@@ -1,0 +1,56 @@
+pipeline {
+    agent any
+
+    environment {
+        REPO_URL = 'git@github.com:Giza-PMS-B/PMS-Backend.git'
+        BRANCH = 'main'
+        DEPLOY_USER = 'deploy'
+        DEPLOY_HOST = 'your.server.ip'
+        DEPLOY_PATH = '/var/www/pms-backend'
+    }
+
+    triggers {
+        githubPush()
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: "${BRANCH}", url: "${REPO_URL}"
+            }
+        }
+
+        stage('Restore & Build .NET') {
+            steps {
+                sh 'dotnet restore PMS.sln'
+                sh 'dotnet build PMS.sln --configuration Release'
+                sh 'dotnet publish PMS.sln -c Release -o publish'
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                sh 'docker-compose build'
+            }
+        }
+
+        stage('Docker Deploy') {
+            steps {
+                sh """
+                rsync -avz --delete ./ ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/
+                ssh ${DEPLOY_USER}@${DEPLOY_HOST} 'cd ${DEPLOY_PATH} && docker-compose up -d'
+                """
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Backend microservices deployed successfully.'
+        }
+        failure {
+            echo 'Pipeline failed. Check logs for details.'
+        }
+    }
+}
+
