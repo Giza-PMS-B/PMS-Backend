@@ -2,71 +2,66 @@ pipeline {
     agent any
 
     environment {
-        REPO_URL = 'git@github.com:Giza-PMS-B/PMS-Backend.git'
-        BRANCH = 'jenkins-pipeline-fix'
-        DEPLOY_PATH = '/var/lib/jenkins/workspace/PMS-backend_main'
+        // Git
+        REPO_URL = 'https://github.com/Giza-PMS-B/PMS-Backend.git'
+        BRANCH   = 'jenkins-pipeline-fix'
 
-        # DB connections for Docker Compose
-        BOOKING_DB_CONNECTION = 'Server=localhost;Database=BookingDb;User Id=sa;Password=yourpassword;'
-        INVOICE_DB_CONNECTION = 'Server=localhost;Database=InvoiceDb;User Id=sa;Password=yourpassword;'
-        SITE_DB_CONNECTION    = 'Server=localhost;Database=SiteDb;User Id=sa;Password=yourpassword;'
+        // Deployment (local machine)
+        DEPLOY_PATH = '/var/www/pms-backend'
+
+        // Docker Compose env vars (will be injected from Jenkins credentials)
+        BOOKING_DB_CONNECTION  = credentials('BOOKING_DB_CONNECTION')
+        INVOICE_DB_CONNECTION = credentials('INVOICE_DB_CONNECTION')
+        SITE_DB_CONNECTION    = credentials('SITE_DB_CONNECTION')
     }
 
     triggers {
-        githubPush()  // trigger on GitHub push
+        githubPush()
     }
 
     stages {
+
         stage('Checkout') {
             steps {
-                git branch: "${BRANCH}", url: "${REPO_URL}"
-            }
-        }
-
-        stage('Check .NET SDK') {
-            steps {
-                sh '''
-                REQUIRED_SDK=$(cat global.json | jq -r '.sdk.version')
-                echo "Required .NET SDK: $REQUIRED_SDK"
-                if ! dotnet --list-sdks | grep -q "$REQUIRED_SDK"; then
-                    echo "ERROR: Required SDK $REQUIRED_SDK is not installed."
-                    exit 1
-                fi
-                '''
+                git branch: "${BRANCH}",
+                    url: "${REPO_URL}",
+                    credentialsId: 'GitHub-omar'
             }
         }
 
         stage('Restore & Build .NET') {
             steps {
-                sh 'dotnet restore PMS.sln'
-                sh 'dotnet build PMS.sln --configuration Release'
-                sh 'dotnet publish PMS.sln -c Release -o publish'
+                sh '''
+                    dotnet --version
+                    dotnet restore PMS.sln
+                    dotnet build PMS.sln -c Release
+                    dotnet publish PMS.sln -c Release -o publish
+                '''
             }
         }
 
         stage('Docker Build') {
             steps {
-                sh 'docker-compose build'
+                sh 'docker compose build'
             }
         }
 
-        stage('Docker Deploy (Local)') {
+        stage('Docker Deploy (Localhost)') {
             steps {
-                sh """
-                cd ${DEPLOY_PATH}
-                docker-compose down
-                docker-compose up -d --build
-                """
+                sh '''
+                    docker compose down
+                    docker compose up -d
+                '''
             }
         }
     }
 
     post {
         success {
-            echo 'Backend microservices deployed successfully on local host.'
+            echo '✅ Backend deployed successfully'
         }
         failure {
-            echo 'Pipeline failed. Check logs for details.'
+            echo '❌ Pipeline failed'
         }
     }
 }
