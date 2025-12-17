@@ -2,24 +2,37 @@ pipeline {
     agent any
 
     environment {
-        REPO_URL = 'https://github.com/Giza-PMS-B/PMS-Backend.git'
-        DEPLOY_USER = 'deploy'
-        DEPLOY_HOST = 'your.server.ip'
-        DEPLOY_PATH = '/var/www/pms-backend'
+        REPO_URL = 'git@github.com:Giza-PMS-B/PMS-Backend.git'
+        BRANCH = 'jenkins-pipeline-fix'
+        DEPLOY_PATH = '/var/lib/jenkins/workspace/PMS-backend_main'
+
+        # DB connections for Docker Compose
+        BOOKING_DB_CONNECTION = 'Server=localhost;Database=BookingDb;User Id=sa;Password=yourpassword;'
+        INVOICE_DB_CONNECTION = 'Server=localhost;Database=InvoiceDb;User Id=sa;Password=yourpassword;'
+        SITE_DB_CONNECTION    = 'Server=localhost;Database=SiteDb;User Id=sa;Password=yourpassword;'
     }
 
     triggers {
-        githubPush()
+        githubPush()  // trigger on GitHub push
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git(
-                    url: "${REPO_URL}",
-                    branch: 'main',
-                    credentialsId: 'GitHub-omar'  // your PAT credential ID
-                )
+                git branch: "${BRANCH}", url: "${REPO_URL}"
+            }
+        }
+
+        stage('Check .NET SDK') {
+            steps {
+                sh '''
+                REQUIRED_SDK=$(cat global.json | jq -r '.sdk.version')
+                echo "Required .NET SDK: $REQUIRED_SDK"
+                if ! dotnet --list-sdks | grep -q "$REQUIRED_SDK"; then
+                    echo "ERROR: Required SDK $REQUIRED_SDK is not installed."
+                    exit 1
+                fi
+                '''
             }
         }
 
@@ -33,15 +46,16 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                sh 'sudo docker-compose build'
+                sh 'docker-compose build'
             }
         }
 
-        stage('Docker Deploy') {
+        stage('Docker Deploy (Local)') {
             steps {
                 sh """
-                rsync -avz --delete ./ ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/
-                ssh ${DEPLOY_USER}@${DEPLOY_HOST} 'cd ${DEPLOY_PATH} && docker-compose up -d'
+                cd ${DEPLOY_PATH}
+                docker-compose down
+                docker-compose up -d --build
                 """
             }
         }
@@ -49,7 +63,7 @@ pipeline {
 
     post {
         success {
-            echo 'Backend microservices deployed successfully.'
+            echo 'Backend microservices deployed successfully on local host.'
         }
         failure {
             echo 'Pipeline failed. Check logs for details.'
