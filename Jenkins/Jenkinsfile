@@ -2,17 +2,10 @@ pipeline {
     agent any
 
     environment {
-        // Git
         REPO_URL = 'https://github.com/Giza-PMS-B/PMS-Backend.git'
-        BRANCH   = 'jenkins-pipeline-fix'
-
-        // Deployment (local machine)
+        DEPLOY_USER = 'deploy'
+        DEPLOY_HOST = 'your.server.ip'
         DEPLOY_PATH = '/var/www/pms-backend'
-
-        // Docker Compose env vars (will be injected from Jenkins credentials)
-        BOOKING_DB_CONNECTION  = credentials('BOOKING_DB_CONNECTION')
-        INVOICE_DB_CONNECTION = credentials('INVOICE_DB_CONNECTION')
-        SITE_DB_CONNECTION    = credentials('SITE_DB_CONNECTION')
     }
 
     triggers {
@@ -20,48 +13,46 @@ pipeline {
     }
 
     stages {
-
         stage('Checkout') {
             steps {
-                git branch: "${BRANCH}",
+                git(
                     url: "${REPO_URL}",
-                    credentialsId: 'GitHub-omar'
+                    branch: 'main',
+                    credentialsId: 'GitHub-omar'  // your PAT credential ID
+                )
             }
         }
 
         stage('Restore & Build .NET') {
             steps {
-                sh '''
-                    dotnet --version
-                    dotnet restore PMS.sln
-                    dotnet build PMS.sln -c Release
-                    dotnet publish PMS.sln -c Release -o publish
-                '''
+                sh 'dotnet restore PMS.sln'
+                sh 'dotnet build PMS.sln --configuration Release'
+                sh 'dotnet publish PMS.sln -c Release -o publish'
             }
         }
 
         stage('Docker Build') {
             steps {
-                sh 'docker compose build'
+                sh 'sudo docker-compose build'
             }
         }
 
-        stage('Docker Deploy (Localhost)') {
+        stage('Docker Deploy') {
             steps {
-                sh '''
-                    docker compose down
-                    docker compose up -d
-                '''
+                sh """
+                rsync -avz --delete ./ ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/
+                ssh ${DEPLOY_USER}@${DEPLOY_HOST} 'cd ${DEPLOY_PATH} && docker-compose up -d'
+                """
             }
         }
     }
 
     post {
         success {
-            echo '✅ Backend deployed successfully'
+            echo 'Backend microservices deployed successfully.'
         }
         failure {
-            echo '❌ Pipeline failed'
+            echo 'Pipeline failed. Check logs for details.'
         }
     }
 }
