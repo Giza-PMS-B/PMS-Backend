@@ -8,13 +8,27 @@ public class AppDbContext : DbContext
     public DbSet<Polygon> Polygons { get; set; }
     public DbSet<PolygonPoint> PolygonPoints { get; set; }
 
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    public AppDbContext()
+    : base()
     {
-        
+
+    }
+
+    public AppDbContext(DbContextOptions<AppDbContext> options)
+        : base(options)
+    {
+    }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        if (!optionsBuilder.IsConfigured)
+        {
+            optionsBuilder.UseSqlServer("");
+        }
+
     }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // Apply all configurations in the assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
 
