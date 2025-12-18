@@ -6,4 +6,14 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="../SharedKernel.EventDriven.Abstraction/SharedKernel.EventDriven.Abstraction.csproj" />
+      <ProjectReference Include="../SharedKernel.Infratsrucrure.Persistent.Abstraction/SharedKernel.Infratsrucrure.Persistent.Abstraction.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="DTO/" />
+      <Folder Include="Services/" />
+    </ItemGroup>
+
 </Project>

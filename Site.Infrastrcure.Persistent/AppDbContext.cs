@@ -22,18 +22,18 @@ public class AppDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        Env.Load();
+        // Env.Load();
 
-        var connectionString = Environment.GetEnvironmentVariable("SITE_DB_CONNECTION");
+        // var connectionString = Environment.GetEnvironmentVariable("SITE_DB_CONNECTION");
 
-        if (string.IsNullOrEmpty(connectionString))
-        {
-            throw new InvalidOperationException("SITE_DB_CONNECTION environment variable is not set.");
-        }
+        // if (string.IsNullOrEmpty(connectionString))
+        // {
+        //     throw new InvalidOperationException("SITE_DB_CONNECTION environment variable is not set.");
+        // }
 
         if (!optionsBuilder.IsConfigured)
         {
-            optionsBuilder.UseSqlServer("connectionString");
+            optionsBuilder.UseSqlServer("Server=db35553.public.databaseasp.net; Database=db35553; User Id=db35553; Password=wG-2=t6Z7%Ag; Encrypt=True; TrustServerCertificate=True; MultipleActiveResultSets=True;");
         }
 
     }

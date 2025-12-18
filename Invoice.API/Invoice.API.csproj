@@ -8,15 +8,23 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.22"/>
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2"/>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.0"/>
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.22" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
     </ItemGroup>
 
     <ItemGroup>
       <Content Include="..\.dockerignore">
         <Link>.dockerignore</Link>
       </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="../Invoice.Application/Invoice.Application.csproj" />
+      <ProjectReference Include="../Invoice.Infrastrcure.Persistent/Invoice.Infrastrcure.Persistent.csproj" />
+      <ProjectReference Include="../SharedKernel.EventDriven.Abstraction/SharedKernel.EventDriven.Abstraction.csproj" />
+      <ProjectReference Include="../SharedKernel.EventDriven/SharedKernel.EventDriven.csproj" />
+      <ProjectReference Include="../SharedKernel.Infratsrucrure.Persistent/SharedKernel.Infratsrucrure.Persistent.csproj" />
+      <ProjectReference Include="../SharedKernel.MessageBus.Kafka/SharedKernel.MessageBus.Kafka.csproj" />
     </ItemGroup>
 
 </Project>
