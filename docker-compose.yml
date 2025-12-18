@@ -1,9 +1,30 @@
+# Shared environment configuration for .NET services
+x-dotnet-environment: &dotnet-environment
+  ASPNETCORE_ENVIRONMENT: ${ENVIRONMENT:-Development}
+  ASPNETCORE_HTTP_PORTS: 8080
+  Kafka__BootstrapServers: kafka:9092
+  Kafka__Producer__Acks: ${KAFKA_PRODUCER_ACKS:-all}
+  Kafka__Producer__MessageTimeoutMs: ${KAFKA_PRODUCER_MESSAGE_TIMEOUT_MS:-30000}
+  Kafka__Consumer__EnableAutoCommit: ${KAFKA_CONSUMER_ENABLE_AUTO_COMMIT:-false}
+  Kafka__Consumer__AutoOffsetReset: ${KAFKA_CONSUMER_AUTO_OFFSET_RESET:-earliest}
+
+# Shared service dependencies
+x-dotnet-service: &dotnet-service
+  networks:
+    - pms-network
+  depends_on:
+    kafka:
+      condition: service_healthy
+    sqlserver:
+      condition: service_healthy
+  restart: unless-stopped
+
 services:
   # Infrastructure Services
 
   # Zookeeper - Required for Kafka
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
+    image: confluentinc/cp-zookeeper:7.6.0
     container_name: pms-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
@@ -12,6 +33,9 @@ services:
       - "2181:2181"
     networks:
       - pms-network
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "2181"]
       interval: 10s
@@ -20,7 +44,7 @@ services:
 
   # Kafka Message Broker
   kafka:
-    image: confluentinc/cp-kafka:7.5.0
+    image: confluentinc/cp-kafka:7.6.0
     container_name: pms-kafka
     depends_on:
       zookeeper:
@@ -38,80 +62,97 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
     networks:
       - pms-network
+    volumes:
+      - kafka_data:/var/lib/kafka/data
     healthcheck:
       test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
       interval: 10s
       timeout: 10s
       retries: 5
+      start_period: 15s
+
+  # SQL Server Database - Local Docker Container
+  # Each service gets its own database: PMS_Booking, PMS_Invoice, PMS_Site
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: pms-sqlserver
+    ports:
+      - "1433:1433"
+    networks:
+      - pms-network
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${SA_PASSWORD:-YourStrong@Passw0rd}
+    volumes:
+      - sql_data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "${SA_PASSWORD:-YourStrong@Passw0rd}" -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
 
   # Application Services
 
-  # Booking API Service
-  booking-api:
+  # Booking Service
+  booking-service:
+    <<: *dotnet-service
+    image: pms-booking-service:latest
+    container_name: pms-booking-service
     build:
       context: .
       dockerfile: Booking.API/Dockerfile
-    container_name: pms-booking-api
-    depends_on:
-      kafka:
-        condition: service_healthy
     ports:
-      - "5001:8080"
+      - "${BOOKING_SERVICE_PORT:-5001}:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT:-Development}
-      - ASPNETCORE_URLS=http://+:8080
-      - ConnectionStrings__DefaultConnection=${BOOKING_DB_CONNECTION}
-      - Kafka__BootstrapServers=kafka:9092
-      - Kafka__GroupId=booking-service
-    networks:
-      - pms-network
-    restart: unless-stopped
+      <<: *dotnet-environment
+      Kafka__ClientId: BookingService
+      Kafka__Consumer__GroupId: BookingServiceGroup
+      ConnectionStrings__DefaultConnection: ${BOOKING_DB_CONNECTION:-Server=sqlserver;Database=PMS_Booking;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;MultipleActiveResultSets=True;}
 
-  # Invoice API Service
-  invoice-api:
+  # Invoice Service
+  invoice-service:
+    <<: *dotnet-service
+    image: pms-invoice-service:latest
+    container_name: pms-invoice-service
     build:
       context: .
       dockerfile: Invoice.API/Dockerfile
-    container_name: pms-invoice-api
-    depends_on:
-      kafka:
-        condition: service_healthy
     ports:
-      - "5002:8080"
+      - "${INVOICE_SERVICE_PORT:-5002}:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT:-Development}
-      - ASPNETCORE_URLS=http://+:8080
-      - ConnectionStrings__DefaultConnection=${INVOICE_DB_CONNECTION}
-      - Kafka__BootstrapServers=kafka:9092
-      - Kafka__GroupId=invoice-service
-    networks:
-      - pms-network
-    restart: unless-stopped
+      <<: *dotnet-environment
+      Kafka__ClientId: InvoiceService
+      Kafka__Consumer__GroupId: InvoiceServiceGroup
+      ConnectionStrings__DefaultConnection: ${INVOICE_DB_CONNECTION:-Server=sqlserver;Database=PMS_Invoice;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;MultipleActiveResultSets=True;}
 
-  # Site API Service
-  site-api:
+  # Site Service
+  site-service:
+    <<: *dotnet-service
+    image: pms-site-service:latest
+    container_name: pms-site-service
     build:
       context: .
       dockerfile: Site.API/Dockerfile
-    container_name: pms-site-api
-    depends_on:
-      kafka:
-        condition: service_healthy
     ports:
-      - "5003:8080"
+      - "${SITE_SERVICE_PORT:-5003}:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT:-Development}
-      - ASPNETCORE_URLS=http://+:8080
-      - ConnectionStrings__DefaultConnection=${SITE_DB_CONNECTION}
-      - Kafka__BootstrapServers=kafka:9092
-      - Kafka__GroupId=site-service
-    networks:
-      - pms-network
-    restart: unless-stopped
+      <<: *dotnet-environment
+      Kafka__ClientId: SiteService
+      Kafka__Consumer__GroupId: SiteServiceGroup
+      ConnectionStrings__DefaultConnection: ${SITE_DB_CONNECTION:-Server=sqlserver;Database=PMS_Site;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;MultipleActiveResultSets=True;}
 
 networks:
   pms-network:
     driver: bridge
     name: pms-network
 
-volumes: {}
+volumes:
+  zookeeper_data:
+    name: pms_zookeeper_data
+  zookeeper_log:
+    name: pms_zookeeper_log
+  kafka_data:
+    name: pms_kafka_data
+  sql_data:
+    name: pms_sql_data
