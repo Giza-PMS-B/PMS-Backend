@@ -9,7 +9,7 @@ public class Polygon
     public string Name { get; set; }
     //relationData 
     public Guid SiteId { get; set; }
-    public site Site { get; set; }
+    public Site Site { get; set; }
 
     public ICollection<PolygonPoint> PolygonPoints { get; set; } = new List<PolygonPoint>();
 }

@@ -2,7 +2,7 @@
 
 namespace Site.Model.Entities;
 
-public class site
+public class Site
 {
     public Guid Id { get; set; }
     public string Path { get; set; }
@@ -18,7 +18,7 @@ public class site
 
     //relation attributes 
     public Guid? ParentId { get; set; }
-    public site? Parent { get; set; }
-    public ICollection<site> Children { get; set; } = new List<site>();
+    public Site? Parent { get; set; }
+    public ICollection<Site> Children { get; set; } = new List<Site>();
     public ICollection<Polygon> Polygons { get; set; } = new List<Polygon>();
 }
