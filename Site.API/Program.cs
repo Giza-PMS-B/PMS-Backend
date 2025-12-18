@@ -36,8 +36,6 @@ public class Program
         // builder.Services.AddScoped<IIntegrationEventQueue, IntegrationEventQueue>();
         builder.Services.AddScoped<SiteService, SiteService>();
 
-
-
         var app = builder.Build();
 
         // Configure the HTTP request pipeline.
