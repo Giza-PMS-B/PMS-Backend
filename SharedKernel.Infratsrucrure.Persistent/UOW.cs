@@ -13,26 +13,26 @@ namespace SharedKernel.Infrastructure.Persistent
     public class UOW : IUOW
     {
         private readonly DbContext _dbContext;
-        private readonly IMessagePublisher _messagePublisher;
-        private readonly IIntegrationEventQueue _messageQueue;
-        public UOW(DbContext dbContext, IMessagePublisher messagePublisher, IIntegrationEventQueue messageQueue)
+        // private readonly IMessagePublisher _messagePublisher;
+        // private readonly IIntegrationEventQueue _messageQueue;
+        public UOW(DbContext dbContext)
         {
             _dbContext = dbContext;
-            this._messagePublisher = messagePublisher;
-            _messageQueue = messageQueue;
+            // this._messagePublisher = messagePublisher;
+            // _messageQueue = messageQueue;
         }
 
         public async Task SaveChangesAsync()
         {
             await _dbContext.SaveChangesAsync();
 
-            var events = _messageQueue.GetAllEvents().ToList();
-            foreach (var integrationEvent in events)
-            {
-                await _messagePublisher.PublishAsync(integrationEvent);
-            }
+            //var events = _messageQueue.GetAllEvents().ToList();
+            // foreach (var integrationEvent in events)
+            // {
+            //     await _messagePublisher.PublishAsync(integrationEvent);
+            // }
 
-            _messageQueue.Reset();
+            // _messageQueue.Reset();
         }
     }
 }
