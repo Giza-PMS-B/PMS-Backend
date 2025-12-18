@@ -1,6 +1,7 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
+
 #nullable disable
 
 namespace Booking.Infrastrcure.Persistent.Migrations
