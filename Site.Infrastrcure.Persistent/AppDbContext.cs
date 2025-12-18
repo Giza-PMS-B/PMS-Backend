@@ -5,7 +5,7 @@ namespace Site.Infrastrcure.Persistent;
 
 public class AppDbContext : DbContext
 {
-    public DbSet<site> Sites { get; set; }
+    public DbSet<Model.Entities.Site> Sites { get; set; }
     public DbSet<Polygon> Polygons { get; set; }
     public DbSet<PolygonPoint> PolygonPoints { get; set; }
 
@@ -33,7 +33,7 @@ public class AppDbContext : DbContext
 
         if (!optionsBuilder.IsConfigured)
         {
-            optionsBuilder.UseSqlServer(connectionString);
+            optionsBuilder.UseSqlServer("connectionString");
         }
 
     }

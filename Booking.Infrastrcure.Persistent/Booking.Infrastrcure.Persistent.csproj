@@ -8,6 +8,7 @@
 
     <ItemGroup>
       <Folder Include="Configurations/" />
+      <Folder Include="Repositories/" />
     </ItemGroup>
 
     <ItemGroup>
@@ -23,6 +24,8 @@
 
     <ItemGroup>
       <ProjectReference Include="../code/Services/Booking/Booking.Model/Booking.Model.csproj" />
+      <ProjectReference Include="../SharedKernel.Infratsrucrure.Persistent.Abstraction/SharedKernel.Infratsrucrure.Persistent.Abstraction.csproj" />
+      <ProjectReference Include="../SharedKernel.Infratsrucrure.Persistent/SharedKernel.Infratsrucrure.Persistent.csproj" />
     </ItemGroup>
 
 </Project>
