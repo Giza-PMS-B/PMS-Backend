@@ -17,14 +17,15 @@
       <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
     </ItemGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="../code/Services/Invoice/Invoice.Model/Invoice.Model.csproj" />
-      <ProjectReference Include="../SharedKernel.Infratsrucrure.Persistent/SharedKernel.Infratsrucrure.Persistent.csproj" />
-    </ItemGroup>
 
     <ItemGroup>
       <Folder Include="Configurations/" />
-      <Folder Include="Repositories/" />
+    </ItemGroup>
+
+
+    <ItemGroup>
+      <ProjectReference Include="../code/Services/Invoice/Invoice.Model/Invoice.Model.csproj" />
+      <ProjectReference Include="../SharedKernel.Infratsrucrure.Persistent.Abstraction/SharedKernel.Infratsrucrure.Persistent.Abstraction.csproj" />
     </ItemGroup>
 
 </Project>

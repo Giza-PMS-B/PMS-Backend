@@ -20,8 +20,17 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="../SharedKernel.MessageBus.Kafka/SharedKernel.MessageBus.Kafka.csproj" />
+      <ProjectReference Include="../Site.Application/Site.Application.csproj" />
+      <ProjectReference Include="../SharedKernel.EventDriven.Abstraction/SharedKernel.EventDriven.Abstraction.csproj" />
+      <ProjectReference Include="../SharedKernel.EventDriven/SharedKernel.EventDriven.csproj" />
       <ProjectReference Include="../SharedKernel.Infratsrucrure.Persistent/SharedKernel.Infratsrucrure.Persistent.csproj" />
       <ProjectReference Include="../Site.Infrastrcure.Persistent/Site.Infrastrcure.Persistent.csproj" />
+      
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Controller/" />
     </ItemGroup>
 
 </Project>

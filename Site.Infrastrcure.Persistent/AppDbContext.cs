@@ -22,18 +22,18 @@ public class AppDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        Env.Load();
+        // Env.Load();
 
-        var connectionString = Environment.GetEnvironmentVariable("SITE_DB_CONNECTION");
+        // var connectionString = Environment.GetEnvironmentVariable("SITE_DB_CONNECTION");
 
-        if (string.IsNullOrEmpty(connectionString))
-        {
-            throw new InvalidOperationException("SITE_DB_CONNECTION environment variable is not set.");
-        }
+        // if (string.IsNullOrEmpty(connectionString))
+        // {
+        //     throw new InvalidOperationException("SITE_DB_CONNECTION environment variable is not set.");
+        // }
 
         if (!optionsBuilder.IsConfigured)
         {
-            optionsBuilder.UseSqlServer("connectionString");
+            optionsBuilder.UseSqlServer("");
         }
 
     }
