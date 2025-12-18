@@ -1,3 +1,7 @@
+using Microsoft.EntityFrameworkCore;
+using SharedKernel.Infrastructure.Persistent;
+using Site.Infrastrcure.Persistent;
+
 namespace Site.API;
 
 public class Program
@@ -12,6 +16,14 @@ public class Program
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
+
+        builder.Services.AddDbContext<AppDbContext>(options =>
+        {
+            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+        });
+
+        builder.Services.AddScoped<UOW, SiteUOW>();
+
 
         var app = builder.Build();
 

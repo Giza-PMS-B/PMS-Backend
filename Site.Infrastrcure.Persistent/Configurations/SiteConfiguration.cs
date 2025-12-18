@@ -6,9 +6,9 @@ using Site.Model.Entities;
 
 namespace Site.Infrastrcure.Persistent.Configurations;
 
-public class SiteConfiguration : IEntityTypeConfiguration<site>
+public class SiteConfiguration : IEntityTypeConfiguration<Model.Entities.Site>
 {
-    public void Configure(EntityTypeBuilder<site> builder)
+    public void Configure(EntityTypeBuilder<Model.Entities.Site> builder)
     {
         builder.ToTable("Sites");
 

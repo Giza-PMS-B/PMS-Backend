@@ -11,7 +11,7 @@ public class PolygonPointConfiguration : IEntityTypeConfiguration<PolygonPoint>
     {
         builder.ToTable("PolygonPoints");
         builder.HasKey(pp => new { pp.PolygonId, pp.Longitude, pp.Latitude });
-        
+
         builder.Property(pp => pp.Longitude)
         .IsRequired()
         .HasColumnType("decimal(9,6)");
