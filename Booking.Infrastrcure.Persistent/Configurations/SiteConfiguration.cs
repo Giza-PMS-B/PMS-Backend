@@ -1,14 +1,13 @@
 using System;
+using Booking.Model.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Site.Model.Entities;
 
-namespace Site.Infrastrcure.Persistent.Configurations;
+namespace Booking.Infrastrcure.Persistent.Configurations;
 
-public class SiteConfiguration : IEntityTypeConfiguration<site>
+public class SiteConfiguration : IEntityTypeConfiguration<Site>
 {
-    public void Configure(EntityTypeBuilder<site> builder)
+    public void Configure(EntityTypeBuilder<Site> builder)
     {
         builder.ToTable("Sites");
 
@@ -34,20 +33,10 @@ public class SiteConfiguration : IEntityTypeConfiguration<site>
         .IsRequired()
         .HasColumnType("decimal(18,2)");
 
-
-        builder.Property(site => site.ParentId);
-
         builder
-             .HasOne(s => s.Parent)
-             .WithMany(s => s.Children)
-             .HasForeignKey(s => s.ParentId)
-             .OnDelete(DeleteBehavior.Restrict);
-
-        builder
-            .HasMany(s => s.Polygons)
-            .WithOne(p => p.Site)
-            .HasForeignKey(p => p.SiteId)
+            .HasMany(s => s.Tickets)
+            .WithOne(t => t.Site)
+            .HasForeignKey(t => t.SiteId)
             .OnDelete(DeleteBehavior.Cascade);
-
     }
 }

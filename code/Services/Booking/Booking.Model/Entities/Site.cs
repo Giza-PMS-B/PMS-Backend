@@ -1,14 +1,16 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System;
+using System.ComponentModel.DataAnnotations;
 
-namespace Site.Model.Entities;
+namespace Booking.Model.Entities;
 
-public class site
+public class Site
 {
     public Guid Id { get; set; }
     public string Path { get; set; }
 
     [StringLength(100, MinimumLength = 3)]
     public string NameEn { get; set; }
+
     [StringLength(100, MinimumLength = 3)]
     public string NameAr { get; set; }
     public decimal PricePerHour { get; set; }
@@ -16,9 +18,6 @@ public class site
     public int NumberOfSolts { get; set; }
     private bool IsLeaf { get; set; }
 
-    //relation attributes 
-    public Guid? ParentId { get; set; }
-    public site? Parent { get; set; }
-    public ICollection<site> Children { get; set; } = new List<site>();
-    public ICollection<Polygon> Polygons { get; set; } = new List<Polygon>();
+    //relation attributes
+    public ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();
 }
