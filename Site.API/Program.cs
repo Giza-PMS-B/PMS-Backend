@@ -22,22 +22,19 @@ public class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
 
-        // builder.Services.AddDbContext<AppDbContext>(options =>
-        // {
-        //     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-        // });
-        builder.Services.AddDbContext<DbContext>(options =>
-       {
-           options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-       });
+        builder.Services.AddDbContext<AppDbContext>(options =>
+        {
+            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+        });
+
+        // Register DbContext to resolve to AppDbContext
+        builder.Services.AddScoped<DbContext>(provider => provider.GetRequiredService<AppDbContext>());
 
         builder.Services.AddScoped<IUOW, UOW>();
         builder.Services.AddScoped(typeof(IRepo<Model.Entities.Site>), typeof(Repo<Model.Entities.Site>));
         // builder.Services.AddScoped<IIntegrationEventProducer, IntegrationEventQueue>();
         // builder.Services.AddScoped<IIntegrationEventQueue, IntegrationEventQueue>();
         builder.Services.AddScoped<SiteService, SiteService>();
-
-
 
         var app = builder.Build();
 
