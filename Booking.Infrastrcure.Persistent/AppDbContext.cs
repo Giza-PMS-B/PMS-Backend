@@ -1,13 +1,13 @@
-﻿using DotNetEnv;
+﻿using Booking.Model.Entities;
+using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
-using Site.Model.Entities;
-namespace Site.Infrastrcure.Persistent;
+
+namespace Booking.Infrastrcure.Persistent;
 
 public class AppDbContext : DbContext
 {
-    public DbSet<site> Sites { get; set; }
-    public DbSet<Polygon> Polygons { get; set; }
-    public DbSet<PolygonPoint> PolygonPoints { get; set; }
+    public DbSet<Site> Sites { get; set; }
+    public DbSet<Ticket> Tickets { get; set; }
 
     public AppDbContext()
     : base()
@@ -24,11 +24,11 @@ public class AppDbContext : DbContext
     {
         Env.Load();
 
-        var connectionString = Environment.GetEnvironmentVariable("SITE_DB_CONNECTION");
+        var connectionString = Environment.GetEnvironmentVariable("BOOKING_DB_CONNECTION");
 
         if (string.IsNullOrEmpty(connectionString))
         {
-            throw new InvalidOperationException("SITE_DB_CONNECTION environment variable is not set.");
+            throw new InvalidOperationException("BOOKING_DB_CONNECTION environment variable is not set.");
         }
 
         if (!optionsBuilder.IsConfigured)
@@ -41,5 +41,4 @@ public class AppDbContext : DbContext
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
-
 }
