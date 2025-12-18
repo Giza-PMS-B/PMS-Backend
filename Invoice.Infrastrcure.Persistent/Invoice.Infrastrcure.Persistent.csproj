@@ -19,10 +19,12 @@
 
     <ItemGroup>
       <ProjectReference Include="../code/Services/Invoice/Invoice.Model/Invoice.Model.csproj" />
+      <ProjectReference Include="../SharedKernel.Infratsrucrure.Persistent/SharedKernel.Infratsrucrure.Persistent.csproj" />
     </ItemGroup>
 
     <ItemGroup>
       <Folder Include="Configurations/" />
+      <Folder Include="Repositories/" />
     </ItemGroup>
 
 </Project>
