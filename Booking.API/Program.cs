@@ -22,7 +22,6 @@ public class Program
             options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
         });
 
-        builder.Services.AddScoped<UOW, BookingUOW>();
 
         var app = builder.Build();
 

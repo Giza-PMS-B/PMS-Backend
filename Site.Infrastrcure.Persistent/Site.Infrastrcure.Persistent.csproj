@@ -8,7 +8,6 @@
 
     <ItemGroup>
       <Folder Include="Configurations\" />
-      <Folder Include="Repositories/" />
     </ItemGroup>
 
     <ItemGroup>
@@ -28,7 +27,6 @@
 
     <ItemGroup>
       <ProjectReference Include="../SharedKernel.Infratsrucrure.Persistent.Abstraction/SharedKernel.Infratsrucrure.Persistent.Abstraction.csproj" />
-      <ProjectReference Include="../SharedKernel.Infratsrucrure.Persistent/SharedKernel.Infratsrucrure.Persistent.csproj" />
       <ProjectReference Include="..\Site.Model\Site.Model.csproj" />
     </ItemGroup>
 
