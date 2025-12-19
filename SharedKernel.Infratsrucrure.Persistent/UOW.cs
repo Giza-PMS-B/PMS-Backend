@@ -12,6 +12,7 @@ namespace SharedKernel.Infrastructure.Persistent
 {
     public class UOW : IUOW
     {
+        //very important to uncomment these lines when you want to use events
         private readonly DbContext _dbContext;
         // private readonly IMessagePublisher _messagePublisher;
         // private readonly IIntegrationEventQueue _messageQueue;

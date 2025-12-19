@@ -7,12 +7,14 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="../code/Services/Booking/Booking.Model/Booking.Model.csproj" />
       <ProjectReference Include="../SharedKernel.EventDriven.Abstraction/SharedKernel.EventDriven.Abstraction.csproj" />
       <ProjectReference Include="../SharedKernel.Infratsrucrure.Persistent/SharedKernel.Infratsrucrure.Persistent.csproj" />
     </ItemGroup>
 
     <ItemGroup>
       <Folder Include="DTO/" />
+      <Folder Include="FluentValidation/" />
       <Folder Include="Services/" />
     </ItemGroup>
 

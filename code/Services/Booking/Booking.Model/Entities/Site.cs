@@ -16,7 +16,7 @@ public class Site
     public decimal PricePerHour { get; set; }
     public string IntegrationCode { get; set; }
     public int NumberOfSolts { get; set; }
-    private bool IsLeaf { get; set; }
+    public bool IsLeaf { get; set; }
 
     //relation attributes
     public ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();

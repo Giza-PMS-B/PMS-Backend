@@ -32,6 +32,7 @@ public class SiteConfiguration : IEntityTypeConfiguration<Site>
         builder.Property(site => site.PricePerHour)
         .IsRequired()
         .HasColumnType("decimal(18,2)");
+        builder.Property(site => site.IsLeaf).IsRequired();
 
         builder
             .HasMany(s => s.Tickets)
