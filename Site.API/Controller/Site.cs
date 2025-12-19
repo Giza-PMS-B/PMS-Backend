@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Site.Application.DTO;
 using Site.Application.Services;
 
 namespace Site.API.Controller
@@ -20,11 +21,10 @@ namespace Site.API.Controller
         }
 
         [HttpPost]
-        public async Task<IActionResult> AddSite()
+        public async Task<IActionResult> AddSite(CreateSiteDTO createSiteDTO)
         {
-            await _siteService.CreateSiteAsync();
+            await _siteService.CreateSiteAsync(createSiteDTO);
             return Ok("Site created successfully.");
         }
-
     }
 }
