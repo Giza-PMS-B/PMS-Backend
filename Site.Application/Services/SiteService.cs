@@ -1,5 +1,7 @@
 using System;
+using System.ComponentModel.DataAnnotations;
 using SharedKernel.Infrastructure.Persistent.Abstraction;
+using Site.Application.DTO;
 using Site.Model.Entities;
 
 namespace Site.Application.Services;
@@ -15,49 +17,54 @@ public class SiteService
         _uow = uow;
     }
 
-    public async Task<Model.Entities.Site> CreateSiteAsync()
+    public async Task<Model.Entities.Site> CreateSiteAsync(CreateSiteDTO createSiteDTO)
     {
-        var uniqueId = Guid.NewGuid().ToString().Substring(0, 8);
+        if (createSiteDTO.Polygons == null || !createSiteDTO.Polygons.Any())
+            throw new ValidationException("Site must have at least one polygon.");
+
+
+        foreach (var polygon in createSiteDTO.Polygons)
+        {
+            if (polygon.Points == null || polygon.Points.Count < 3)
+                throw new ValidationException("Polygon must have at least 3 points.");
+        }
+
         var site = new Model.Entities.Site
         {
             Id = Guid.NewGuid(),
-            Path = $"/location/to/site/{uniqueId}",
-            NameEn = $"Sample Site {uniqueId}",
-            NameAr = $"موقع تجريبي {uniqueId}",
-            PricePerHour = 100,
-            IntegrationCode = $"INTG-{uniqueId}",
-            NumberOfSolts = 50,
-            ParentId = null
+            Path = createSiteDTO.Path,
+            NameEn = createSiteDTO.NameEn,
+            NameAr = createSiteDTO.NameAr,
+            PricePerHour = createSiteDTO.PricePerHour,
+            IntegrationCode = createSiteDTO.IntegrationCode,
+            NumberOfSolts = createSiteDTO.NumberOfSolts,
+            IsLeaf = createSiteDTO.IsLeaf,
+            ParentId = createSiteDTO.ParentId
         };
-
-        for (int i = 0; i < 1; i++)
+        
+        foreach (var polygonDto in createSiteDTO.Polygons)
         {
             var polygon = new Polygon
             {
                 Id = Guid.NewGuid(),
-                Name = "PolygonA1",
+                Name = polygonDto.Name,
                 Site = site
             };
 
-            for (int j = 0; j < 3; j++)
+            foreach (var pointDto in polygonDto.Points)
             {
-                var pointDto = new
+                polygon.PolygonPoints.Add(new PolygonPoint
                 {
-                    Latitude = 10.0 + j,
-                    Longitude = 20.0 + j
-                };
-                {
-                    polygon.PolygonPoints.Add(new PolygonPoint
-                    {
-                        PolygonId = polygon.Id,
-                        Latitude = (decimal)pointDto.Latitude,
-                        Longitude = (decimal)pointDto.Longitude
-                    });
-                }
-
-                site.Polygons.Add(polygon);
+                    PolygonId = polygon.Id,
+                    Latitude = pointDto.Latitude,
+                    Longitude = pointDto.Longitude
+                });
             }
+
+            site.Polygons.Add(polygon);
         }
+
+
         await _siteRepository.AddAsync(site);
         await _uow.SaveChangesAsync();
         return site;
