@@ -22,18 +22,10 @@ public class AppDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        Env.Load();
-
-        var connectionString = Environment.GetEnvironmentVariable("BOOKING_DB_CONNECTION");
-
-        if (string.IsNullOrEmpty(connectionString))
-        {
-            throw new InvalidOperationException("BOOKING_DB_CONNECTION environment variable is not set.");
-        }
 
         if (!optionsBuilder.IsConfigured)
         {
-            optionsBuilder.UseSqlServer(connectionString);
+            optionsBuilder.UseSqlServer("");
         }
 
     }

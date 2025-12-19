@@ -15,7 +15,7 @@ namespace Site.API.Controller
             _siteService = siteService;
         }
         [HttpGet]
-        public string Get()
+        public string CheckHealth()
         {
             return "Site API is running";
         }

@@ -22,7 +22,7 @@ public class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
 
-        System.Console.WriteLine(builder.Configuration.GetConnectionString("DefaultConnection"));
+
         builder.Services.AddDbContext<AppDbContext>(options =>
         {
             options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
@@ -33,6 +33,8 @@ public class Program
 
         builder.Services.AddScoped<IUOW, UOW>();
         builder.Services.AddScoped(typeof(IRepo<Model.Entities.Site>), typeof(Repo<Model.Entities.Site>));
+
+        // very importatant to uncomment that when dealing with events
         // builder.Services.AddScoped<IIntegrationEventProducer, IntegrationEventQueue>();
         // builder.Services.AddScoped<IIntegrationEventQueue, IntegrationEventQueue>();
         builder.Services.AddScoped<SiteService, SiteService>();
