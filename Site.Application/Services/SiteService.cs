@@ -20,11 +20,11 @@ public class SiteService
         var site = new Model.Entities.Site
         {
             Id = Guid.NewGuid(),
-            Path = "/location/to/site1",
-            NameEn = "Sample Site 1",
-            NameAr = "موقع تجريبمي",
+            Path = "/location/to/site5",
+            NameEn = "SamtpSSle Site 1",
+            NameAr = "موقع تجهييريبمي",
             PricePerHour = 100,
-            IntegrationCode = "INTG823",
+            IntegrationCode = "INTG723",
             NumberOfSolts = 50,
             ParentId = null
         };
@@ -34,7 +34,7 @@ public class SiteService
             var polygon = new Polygon
             {
                 Id = Guid.NewGuid(),
-                Name = "PolygoncsA1",
+                Name = "PolygoncsA498",
                 Site = site
             };
 
@@ -42,8 +42,8 @@ public class SiteService
             {
                 var pointDto = new
                 {
-                    Latitude = 11.0 + j,
-                    Longitude = 21.0 + j
+                    Latitude = 12.0 + j,
+                    Longitude = 28.0 + j
                 };
                 {
                     polygon.PolygonPoints.Add(new PolygonPoint
