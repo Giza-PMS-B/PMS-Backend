@@ -6,10 +6,10 @@ namespace Booking.API.Controller
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class TicketController : ControllerBase
+    public class BookingController : ControllerBase
     {
         private readonly TicketService _ticketService;
-        public TicketController(TicketService ticketService)
+        public BookingController(TicketService ticketService)
         {
             _ticketService = ticketService;
         }
