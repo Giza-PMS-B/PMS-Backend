@@ -1,6 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using SharedKernel.EventDriven;
-using SharedKernel.EventDriven.Abstraction;
 using SharedKernel.Infrastructure.Persistent;
 using SharedKernel.Infrastructure.Persistent.Abstraction;
 using Site.Application.Services;
@@ -30,14 +28,37 @@ public class Program
 
         // Register DbContext to resolve to AppDbContext
         builder.Services.AddScoped<DbContext>(provider => provider.GetRequiredService<AppDbContext>());
-
         builder.Services.AddScoped<IUOW, UOW>();
         builder.Services.AddScoped(typeof(IRepo<Model.Entities.Site>), typeof(Repo<Model.Entities.Site>));
+        builder.Services.AddScoped<SiteService>();
+
 
         // very importatant to uncomment that when dealing with events
         // builder.Services.AddScoped<IIntegrationEventProducer, IntegrationEventQueue>();
         // builder.Services.AddScoped<IIntegrationEventQueue, IntegrationEventQueue>();
-        builder.Services.AddScoped<SiteService, SiteService>();
+
+
+
+        // builder.Services.AddKafkaBroker(options =>
+        // {
+        //     options.BootstrapServers = "localhost:9092";
+        //     options.ClientId = "ServiceTemplate";
+        //     options.Producer = new ProducerOptions
+        //     {
+        //         Acks = Confluent.Kafka.Acks.All,
+        //         MessageTimeoutMs = 30000,
+
+        //     };
+        //     options.Consumer = new ConsumerOptions
+        //     {
+        //         GroupId = "ServiceTemplateGroup",
+        //         EnableAutoCommit = false,
+        //         AutoOffsetReset = Confluent.Kafka.AutoOffsetReset.Earliest
+        //     };
+        // })
+        //     .AddKafkaConsumer<OrderCreatedEvent, OrderCreatedHandler>()
+        //     .AddKafkaConsumer<PaymentEvent, PaymentHandler>();
+
 
         var app = builder.Build();
 

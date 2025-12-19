@@ -31,12 +31,35 @@ public class Program
 
         builder.Services.AddScoped<IUOW, UOW>();
         builder.Services.AddScoped(typeof(IRepo<Ticket>), typeof(Repo<Ticket>));
+        builder.Services.AddScoped(typeof(IRepo<Site>), typeof(Repo<Site>));
+        builder.Services.AddScoped<TicketService>();
+        builder.Services.AddScoped<SiteService>();
+
+
 
         // very importatant to uncomment that when dealing with events
         // builder.Services.AddScoped<IIntegrationEventProducer, IntegrationEventQueue>();
         // builder.Services.AddScoped<IIntegrationEventQueue, IntegrationEventQueue>();
 
-        builder.Services.AddScoped<TicketService, TicketService>();
+        // builder.Services.AddKafkaBroker(options =>
+        // {
+        //     options.BootstrapServers = "localhost:9092";
+        //     options.ClientId = "ServiceTemplate";
+        //     options.Producer = new ProducerOptions
+        //     {
+        //         Acks = Confluent.Kafka.Acks.All,
+        //         MessageTimeoutMs = 30000,
+
+        //     };
+        //     options.Consumer = new ConsumerOptions
+        //     {
+        //         GroupId = "ServiceTemplateGroup",
+        //         EnableAutoCommit = false,
+        //         AutoOffsetReset = Confluent.Kafka.AutoOffsetReset.Earliest
+        //     };
+        // })
+        //     .AddKafkaConsumer<OrderCreatedEvent, OrderCreatedHandler>()
+        //     .AddKafkaConsumer<PaymentEvent, PaymentHandler>();
 
 
         var app = builder.Build();
