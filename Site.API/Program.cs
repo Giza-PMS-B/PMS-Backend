@@ -1,6 +1,9 @@
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 using SharedKernel.Infrastructure.Persistent;
 using SharedKernel.Infrastructure.Persistent.Abstraction;
+using Site.Application.FluentValidation;
 using Site.Application.Services;
 using Site.Infrastrcure.Persistent;
 
@@ -19,6 +22,9 @@ public class Program
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
+
+        builder.Services.AddFluentValidationAutoValidation();
+        builder.Services.AddValidatorsFromAssemblyContaining<CreateSiteDTOValidator>();
 
 
         builder.Services.AddDbContext<AppDbContext>(options =>

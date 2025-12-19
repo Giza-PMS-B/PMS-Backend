@@ -1,6 +1,10 @@
+using Booking.Application.DTO;
+using Booking.Application.FluentValidation;
 using Booking.Application.Services;
 using Booking.Infrastrcure.Persistent;
 using Booking.Model.Entities;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 using SharedKernel.Infrastructure.Persistent;
 using SharedKernel.Infrastructure.Persistent.Abstraction;
@@ -20,6 +24,9 @@ public class Program
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
+
+        builder.Services.AddFluentValidationAutoValidation();
+        builder.Services.AddValidatorsFromAssemblyContaining<CreateTicketDTOValidator>();
 
         builder.Services.AddDbContext<AppDbContext>(options =>
         {

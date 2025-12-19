@@ -1,3 +1,6 @@
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using Invoice.Application.FluentValidation;
 using Invoice.Application.Services;
 using Invoice.Infrastrcure.Persistent;
 using Invoice.Model.Entities;
@@ -20,6 +23,9 @@ public class Program
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
+
+        builder.Services.AddFluentValidationAutoValidation();
+        builder.Services.AddValidatorsFromAssemblyContaining<CreateInvoiceDTOValidator>();
 
         builder.Services.AddDbContext<AppDbContext>(options =>
         {
