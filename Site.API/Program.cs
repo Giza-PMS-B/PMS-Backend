@@ -45,7 +45,7 @@ public class Program
             app.UseSwaggerUI();
         }
 
-        app.MapControllers(); // REQUIRED
+        app.MapControllers();
 
         app.UseHttpsRedirection();
 

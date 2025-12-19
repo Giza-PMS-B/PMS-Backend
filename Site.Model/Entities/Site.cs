@@ -14,7 +14,7 @@ public class Site
     public decimal PricePerHour { get; set; }
     public string IntegrationCode { get; set; }
     public int NumberOfSolts { get; set; }
-    private bool IsLeaf { get; set; }
+    public bool IsLeaf { get; set; }
 
     //relation attributes 
     public Guid? ParentId { get; set; }
