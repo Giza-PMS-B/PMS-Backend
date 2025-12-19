@@ -17,7 +17,7 @@ namespace Invoice.API.Controller
         [HttpGet]
         public string CheckHealth()
         {
-            return "Site API is running";
+            return "Invoice API is running";
         }
     }
 }

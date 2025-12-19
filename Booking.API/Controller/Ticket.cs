@@ -17,7 +17,7 @@ namespace Booking.API.Controller
         [HttpGet]
         public string CheckHealth()
         {
-            return "Site API is running";
+            return "Booking API is running";
         }
     }
 }
