@@ -34,6 +34,7 @@ public class SiteConfiguration : IEntityTypeConfiguration<Model.Entities.Site>
         .IsRequired()
         .HasColumnType("decimal(18,2)");
 
+        builder.Property(site => site.IsLeaf).IsRequired();
 
         builder.Property(site => site.ParentId);
 
