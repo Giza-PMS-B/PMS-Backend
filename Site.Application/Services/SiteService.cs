@@ -41,7 +41,7 @@ public class SiteService
             IsLeaf = createSiteDTO.IsLeaf,
             ParentId = createSiteDTO.ParentId
         };
-        
+
         foreach (var polygonDto in createSiteDTO.Polygons)
         {
             var polygon = new Polygon
