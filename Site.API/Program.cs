@@ -36,8 +36,6 @@ public class Program
         // builder.Services.AddScoped<IIntegrationEventQueue, IntegrationEventQueue>();
         builder.Services.AddScoped<SiteService, SiteService>();
 
-
-
         var app = builder.Build();
 
         // Configure the HTTP request pipeline.
@@ -47,7 +45,7 @@ public class Program
             app.UseSwaggerUI();
         }
 
-        app.MapControllers(); // REQUIRED
+        app.MapControllers();
 
         app.UseHttpsRedirection();
 
