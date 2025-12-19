@@ -22,8 +22,15 @@ namespace Site.API.Controller
         [HttpPost]
         public async Task<IActionResult> AddSite()
         {
-            await _siteService.CreateSiteAsync();
-            return Ok("Site created successfully.");
+            try
+            {
+                var site = await _siteService.CreateSiteAsync();
+                return Ok(new { message = "Site created successfully.", siteId = site.Id, nameEn = site.NameEn });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = "Failed to create site.", error = ex.Message });
+            }
         }
 
     }

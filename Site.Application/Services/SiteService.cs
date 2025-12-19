@@ -17,14 +17,15 @@ public class SiteService
 
     public async Task<Model.Entities.Site> CreateSiteAsync()
     {
+        var uniqueId = Guid.NewGuid().ToString().Substring(0, 8);
         var site = new Model.Entities.Site
         {
             Id = Guid.NewGuid(),
-            Path = "/location/to/site",
-            NameEn = "Sample Site",
-            NameAr = "موقع تجريبي",
+            Path = $"/location/to/site/{uniqueId}",
+            NameEn = $"Sample Site {uniqueId}",
+            NameAr = $"موقع تجريبي {uniqueId}",
             PricePerHour = 100,
-            IntegrationCode = "INTG123",
+            IntegrationCode = $"INTG-{uniqueId}",
             NumberOfSolts = 50,
             ParentId = null
         };
