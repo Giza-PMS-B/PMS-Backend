@@ -28,11 +28,11 @@ public class SiteConfiguration : IEntityTypeConfiguration<Model.Entities.Site>
         builder.HasIndex(s => s.NameAr)
                .IsUnique();
 
-        builder.Property(site => site.NumberOfSolts).IsRequired();
-        builder.Property(site => site.Path).IsRequired();
+        builder.Property(site => site.NumberOfSolts);
         builder.Property(site => site.PricePerHour)
-        .IsRequired()
         .HasColumnType("decimal(18,2)");
+
+        builder.Property(site => site.Path).IsRequired();
 
         builder.Property(site => site.IsLeaf).IsRequired();
 

@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.Security;
 using SharedKernel.Infrastructure.Persistent.Abstraction;
 using Site.Application.DTO;
 using Site.Model.Entities;
@@ -17,32 +18,77 @@ public class SiteService
         _uow = uow;
     }
 
-    public async Task<Model.Entities.Site> CreateSiteAsync(CreateSiteDTO createSiteDTO)
+    public async Task<Model.Entities.Site> CreateSiteAsync(CreateSiteDTO dto)
     {
-        if (createSiteDTO.Polygons == null || !createSiteDTO.Polygons.Any())
-            throw new ValidationException("Site must have at least one polygon.");
+        ValidateSite(dto);
 
+        var site = CreateBasicSite(dto);
 
-        foreach (var polygon in createSiteDTO.Polygons)
+        if (dto.IsLeaf)
         {
-            if (polygon.Points == null || polygon.Points.Count < 3)
-                throw new ValidationException("Polygon must have at least 3 points.");
+            AddPolygons(dto, site);
+        }
+        else
+        {
+            // Parent sites must not have leaf-only values
+            site.PricePerHour = null;
+            site.NumberOfSolts = null;
         }
 
-        var site = new Model.Entities.Site
+        await _siteRepository.AddAsync(site);
+        await _uow.SaveChangesAsync();
+        return site;
+    }
+
+    // ----------------- Helpers -----------------
+
+    private static void ValidateSite(CreateSiteDTO dto)
+    {
+        if (dto.IsLeaf)
+        {
+            if (dto.PricePerHour is null)
+                throw new ValidationException("PricePerHour is required for leaf sites.");
+
+            if (dto.NumberOfSolts is null)
+                throw new ValidationException("NumberOfSolts is required for leaf sites.");
+
+            if (dto.Polygons == null || !dto.Polygons.Any())
+                throw new ValidationException("Leaf site must have at least one polygon.");
+
+            foreach (var polygon in dto.Polygons)
+            {
+                if (polygon.Points == null || polygon.Points.Count < 3)
+                    throw new ValidationException("Each polygon must have at least 3 points.");
+            }
+        }
+        else
+        {
+            if (dto.Polygons != null && dto.Polygons.Any())
+                throw new ValidationException("Parent site cannot have polygons.");
+        }
+    }
+
+    private static Model.Entities.Site CreateBasicSite(CreateSiteDTO dto)
+    {
+        return new Model.Entities.Site
         {
             Id = Guid.NewGuid(),
-            Path = createSiteDTO.Path,
-            NameEn = createSiteDTO.NameEn,
-            NameAr = createSiteDTO.NameAr,
-            PricePerHour = createSiteDTO.PricePerHour,
-            IntegrationCode = createSiteDTO.IntegrationCode,
-            NumberOfSolts = createSiteDTO.NumberOfSolts,
-            IsLeaf = createSiteDTO.IsLeaf,
-            ParentId = createSiteDTO.ParentId
-        };
+            Path = dto.Path,
+            NameEn = dto.NameEn,
+            NameAr = dto.NameAr,
+            IntegrationCode = dto.IntegrationCode,
+            IsLeaf = dto.IsLeaf,
+            ParentId = dto.ParentId,
 
-        foreach (var polygonDto in createSiteDTO.Polygons)
+            // Set only for leaf (may be null otherwise)
+            PricePerHour = dto.IsLeaf ? dto.PricePerHour : null,
+            NumberOfSolts = dto.IsLeaf ? dto.NumberOfSolts : null
+        };
+    }
+
+    private static void AddPolygons(CreateSiteDTO dto, Model.Entities.Site site)
+    {
+        foreach (var polygonDto in dto.Polygons)
         {
             var polygon = new Polygon
             {
@@ -63,11 +109,6 @@ public class SiteService
 
             site.Polygons.Add(polygon);
         }
-
-
-        await _siteRepository.AddAsync(site);
-        await _uow.SaveChangesAsync();
-        return site;
     }
 
 }
