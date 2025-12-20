@@ -18,6 +18,19 @@ public class SiteService
         _uow = uow;
     }
 
+    public async Task<List<Model.Entities.Site>> GetAllChildSitesOf(Guid parentId)
+    {
+        return _siteRepository.GetAll().Where(s => s.ParentId == parentId).ToList();
+    }
+    public async Task<List<Model.Entities.Site>> GetLeafSites()
+    {
+        return _siteRepository.GetAll().Where(s => s.IsLeaf == true).ToList();
+    }
+    public async Task<List<Model.Entities.Site>> GetRootSites()
+    {
+        return _siteRepository.GetAll().Where(s => s.ParentId == null).ToList();
+    }
+
     public async Task<Model.Entities.Site> CreateSiteAsync(CreateSiteDTO dto)
     {
         ValidateSite(dto);
