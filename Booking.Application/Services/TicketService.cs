@@ -20,7 +20,7 @@ public class TicketService
     public async Task<Ticket> CreateTicketAsync(CreateTicketDTO createTicketDTO)
 
     {
-        var site = _siteRepository.GetAll().Where(s=>s.Id==createTicketDTO.SiteId);
+        var site = ValidateSiteExistsAsync(createTicketDTO.SiteId);
         if (site == null)
             throw new Exception("Site not found");
 
@@ -43,5 +43,14 @@ public class TicketService
         await _uow.SaveChangesAsync();
 
         return ticket;
+    }
+    private async Task ValidateSiteExistsAsync(Guid siteId)
+    {
+        var exists = await _siteRepository
+            .GetAll()
+            .AnyAsync(s => s.Id == siteId);
+
+        if (!exists)
+            throw new Exception("Site not found");
     }
 }
