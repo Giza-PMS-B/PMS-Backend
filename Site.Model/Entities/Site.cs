@@ -12,7 +12,7 @@ public class Site
     [StringLength(100, MinimumLength = 3)]
     public string NameAr { get; set; }
     public decimal? PricePerHour { get; set; }
-    public string IntegrationCode { get; set; }
+    public string? IntegrationCode { get; set; }
     public int? NumberOfSolts { get; set; }
     public bool IsLeaf { get; set; }
 

@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace Site.Application.DTO
 {
-    internal class CreateLeafSiteDTO : CreateSiteDTO
+    public class CreateLeafSiteDTO : CreateSiteDTO
     {
         public decimal PricePerHour { get; set; }
         public string IntegrationCode { get; set; }
         public int NumberOfSolts { get; set; }
 
-        public List<CreatePolygonDTO>? Polygons { get; set; } = [];
+        public List<CreatePolygonDTO> Polygons { get; set; } = [];
     }
 }
