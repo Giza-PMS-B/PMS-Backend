@@ -26,5 +26,11 @@ namespace Site.API.Controller
             await _siteService.CreateSiteAsync(createSiteDTO);
             return Ok("Site created successfully.");
         }
+        [HttpGet("roots")]
+        public async Task<List<Model.Entities.Site>> GetRootSites()
+        {
+            var sites = await _siteService.GetRootSites();
+            return sites;
+        }
     }
 }
