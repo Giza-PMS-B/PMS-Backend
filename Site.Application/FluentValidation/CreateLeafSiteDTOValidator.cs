@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Site.Application.FluentValidation
 {
-    internal class CreateLeafSiteDTOValidator:AbstractValidator<CreateLeafSiteDTO>
+    internal class CreateLeafSiteDTOValidator : AbstractValidator<CreateLeafSiteDTO>
     {
         public CreateLeafSiteDTOValidator()
         {
@@ -38,5 +38,5 @@ namespace Site.Application.FluentValidation
         }
 
     }
-    }
 }
+

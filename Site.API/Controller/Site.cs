@@ -20,12 +20,22 @@ namespace Site.API.Controller
             return "Site API is running";
         }
 
-        [HttpPost]
-        public async Task<IActionResult> AddSite(CreateSiteDTO createSiteDTO)
+        [HttpPost("add/parent")]
+        public async Task<IActionResult> AddParentSite(CreateSiteDTO createSiteDTO)
         {
-            await _siteService.CreateSiteAsync(createSiteDTO);
+            await _siteService.CreateParentSiteAsync(createSiteDTO);
             return Ok("Site created successfully.");
         }
+
+
+        [HttpPost("add/leaf")]
+        public async Task<IActionResult> AddLeafSite(CreateLeafSiteDTO createLeafSiteDTO)
+        {
+            await _siteService.CreateLeafSiteAsync(createLeafSiteDTO);
+            return Ok("Site created successfully.");
+        }
+
+
         [HttpGet("roots")]
         public async Task<List<Model.Entities.Site>> GetRootSites()
         {
