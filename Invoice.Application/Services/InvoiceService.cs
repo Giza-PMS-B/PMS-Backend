@@ -16,6 +16,20 @@ public class InvoiceService
     }
     public async Task<Model.Entities.Invoice> CreateInvoiceAsync(CreateInvoiceDTO createInvoiceDTO)
     {
-        throw new NotImplementedException();
+        var invoice = new Model.Entities.Invoice
+        {
+            Id = Guid.NewGuid(),
+            HtmlDocumentPath = createInvoiceDTO.HtmlDocumentPath,
+            TaxAmount = createInvoiceDTO.TaxAmount,
+            TotalAmountBeforeTax = createInvoiceDTO.TotalAmountBeforeTax,
+            TotalAmountAfterTax = createInvoiceDTO.TotalAmountAfterTax,
+            TicketSerialNumber = createInvoiceDTO.TicketSerialNumber,
+            TicketId = createInvoiceDTO.TicketId
+        };
+
+        await _invoiceRepository.AddAsync(invoice);
+        await _uow.SaveChangesAsync();
+
+        return invoice;
     }
 }
