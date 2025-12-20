@@ -20,9 +20,8 @@ public class TicketService
     public async Task<Ticket> CreateTicketAsync(CreateTicketDTO createTicketDTO)
 
     {
-        var site = ValidateSiteExistsAsync(createTicketDTO.SiteId);
-        if (site == null)
-            throw new Exception("Site not found");
+        await ValidateSiteExistsAsync(createTicketDTO.SiteId);
+       
 
         var bookingFrom = DateTime.UtcNow;
         var bookingTo = bookingFrom.AddHours(createTicketDTO.NoOfHours);
