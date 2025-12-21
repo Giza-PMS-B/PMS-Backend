@@ -14,7 +14,9 @@ using SharedKernel.Infrastructure.Persistent;
 using SharedKernel.Infrastructure.Persistent.Abstraction;
 using SharedKernel.MessageBus.Abstraction;
 using SharedKernel.MessageBus.Kafka;
+using SharedKernel.Logging;
 using Site.Model.Shared.Events;
+using Serilog;
 
 namespace Booking.API;
 
@@ -24,6 +26,9 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
+        // Add Serilog logging
+        builder.AddSerilogLogging();
+
         // Add services to the container.
         builder.Services.AddAuthorization();
         builder.Services.AddControllers();
@@ -31,6 +36,9 @@ public class Program
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
+
+        // Add shared kernel logging services
+        builder.Services.AddSharedKernelLogging();
 
         builder.Services.AddFluentValidationAutoValidation();
         builder.Services.AddValidatorsFromAssemblyContaining<CreateTicketDTOValidator>();
@@ -88,7 +96,8 @@ public class Program
         builder.Services.AddScoped<IUOW>(provider => new UOW(
             provider.GetRequiredService<DbContext>(),
             provider.GetRequiredService<IMessagePublisher>(),
-            provider.GetRequiredService<IIntegrationEventQueue>()
+            provider.GetRequiredService<IIntegrationEventQueue>(),
+            provider.GetRequiredService<ILogger<UOW>>()
         ));
 
 
@@ -101,12 +110,27 @@ public class Program
             app.UseSwaggerUI();
         }
 
+        // Add logging middleware
+        app.UseSharedKernelLogging();
+
         app.MapControllers();
 
         app.UseHttpsRedirection();
 
         app.UseAuthorization();
 
-        app.Run();
+        try
+        {
+            Log.Information("Starting Booking API");
+            app.Run();
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "Booking API terminated unexpectedly");
+        }
+        finally
+        {
+            Log.CloseAndFlush();
+        }
     }
 }
