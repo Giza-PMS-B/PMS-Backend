@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Confluent.Kafka;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharedKernel.MessageBus.Abstraction;
 using SharedKernel.MessageBus.Kafka.Configurations;
@@ -15,14 +16,16 @@ namespace SharedKernel.MessageBus.Kafka
         private readonly IProducer<string, byte[]> _producer;
         private readonly IMessageNameResolver _resolver;
         private readonly IMessageSerializer _serializer;
+        private readonly ILogger<KafkaMessagePublisher> _logger;
 
         public KafkaMessagePublisher(
             IOptions<KafkaOptions> options,
             IMessageNameResolver resolver,
-            IMessageSerializer serializer)
+            IMessageSerializer serializer, ILogger<KafkaMessagePublisher> logger)
         {
             _resolver = resolver;
             _serializer = serializer;
+            _logger = logger;
 
             var config = new ProducerConfig
             {
@@ -41,7 +44,7 @@ namespace SharedKernel.MessageBus.Kafka
             where TEvent : IntegrationEvent
         {
             var topic = _resolver.Resolve<TEvent>();
-
+            _logger.LogInformation("Successfully created Topic Name {topic}", topic);
             var kafkaMessage = new Message<string, byte[]>
             {
                 Key = message.EventId.ToString(),
@@ -51,7 +54,7 @@ namespace SharedKernel.MessageBus.Kafka
                 { MessageHeaders.CorrelationId, System.Text.Encoding.UTF8.GetBytes(message.EventId.ToString()) }
             }
             };
-
+            _logger.LogInformation("Meeage value =  {val}", kafkaMessage.Value);
             await _producer.ProduceAsync(topic, kafkaMessage, cancellationToken);
         }
 
