@@ -12,5 +12,4 @@ public class SiteResponseDTO
     public bool IsLeaf { get; set; }
     public Guid? ParentId { get; set; }
     public List<PolygonResponseDTO> Polygons { get; set; } = new();
-    public List<SiteResponseDTO> Children { get; set; } = new();
 }

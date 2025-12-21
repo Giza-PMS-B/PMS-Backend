@@ -55,7 +55,7 @@ public class SiteService
                 .ThenInclude(p => p.PolygonPoints)
             .Where(s => s.ParentId == null)
             .ToList();
-        return sites.Select(s => MapToResponseDTO(s, includeChildren: true)).ToList();
+        return sites.Select(s => MapToResponseDTO(s)).ToList();
     }
 
     public async Task<SiteResponseDTO> CreateParentSiteAsync(CreateSiteDTO dto)
@@ -64,10 +64,10 @@ public class SiteService
         ValidateSiteNameUniqueness(dto.NameEn, dto.NameAr);
 
         _logger.LogInformation("start Creating parent site {SiteName} at path {Path}", dto.NameEn, dto.Path);
-        
+
         var parentSite = CreateParentSite(dto);
         await _siteRepository.AddAsync(parentSite);
-        
+
         var siteCreatedEvent = new SiteCreatedEvent
         {
             SiteId = parentSite.Id,
@@ -82,10 +82,9 @@ public class SiteService
 
         await _uow.SaveChangesAsync();
 
-        return MapToResponseDTO(parentSite);
         _logger.LogInformation("Successfully created parent site {SiteId}", parentSite.Id);
-        
-        return parentSite;
+        return MapToResponseDTO(parentSite);
+
     }
     private static Model.Entities.Site CreateParentSite(CreateSiteDTO dto)
     {
@@ -107,11 +106,11 @@ public class SiteService
 
 
         _logger.LogInformation("Creating leaf site {SiteName} with {PolygonCount} polygons", dto.NameEn, dto.Polygons?.Count ?? 0);
-        
+
 
         var leafSite = CreateLeafSite(dto);
         await _siteRepository.AddAsync(leafSite);
-        
+
         var siteCreatedEvent = new SiteCreatedEvent
         {
             SiteId = leafSite.Id,
@@ -128,9 +127,9 @@ public class SiteService
         _logger.LogInformation("Enqueued SiteCreatedEvent for leaf site {SiteId}", leafSite.Id);
 
         await _uow.SaveChangesAsync();
-      
-       _logger.LogInformation("Successfully created leaf site {SiteId}", leafSite.Id);
-         
+
+        _logger.LogInformation("Successfully created leaf site {SiteId}", leafSite.Id);
+
         return MapToResponseDTO(leafSite);
     }
 
@@ -219,7 +218,7 @@ public class SiteService
     }
 
 
-    private static SiteResponseDTO MapToResponseDTO(Model.Entities.Site site, bool includeChildren = false)
+    private static SiteResponseDTO MapToResponseDTO(Model.Entities.Site site)
     {
         var dto = new SiteResponseDTO
         {
@@ -244,13 +243,6 @@ public class SiteService
             }).ToList() ?? new List<PolygonResponseDTO>()
         };
 
-        if (includeChildren && site.Children != null && site.Children.Any())
-        {
-            dto.Children = site.Children.Select(child => MapToResponseDTO(child, false)).ToList();
-        }
-
         return dto;
     }
-
-  }
 }
