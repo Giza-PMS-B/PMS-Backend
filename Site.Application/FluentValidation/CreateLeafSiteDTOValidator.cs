@@ -31,10 +31,25 @@ namespace Site.Application.FluentValidation
             RuleFor(x => x.Polygons)
                 .NotEmpty().WithMessage("At least one polygon is required")
                 .Must(polygons => polygons != null && polygons.Count > 0)
-                .WithMessage("At least one polygon must be added to define boundaries");
+                .WithMessage("At least one polygon must be added to define boundaries")
+                .Must(polygons => !HasDuplicatePolygonNames(polygons))
+                .WithMessage("These Values are already exists");
 
             RuleForEach(x => x.Polygons)
                 .SetValidator(new CreatePolygonDTOValidator());
+        }
+
+        private bool HasDuplicatePolygonNames(List<CreatePolygonDTO> polygons)
+        {
+            if (polygons == null || polygons.Count == 0) return false;
+
+            var distinctNames = polygons
+                .Select(p => p.Name?.Trim().ToLower())
+                .Where(name => !string.IsNullOrEmpty(name))
+                .Distinct()
+                .Count();
+
+            return distinctNames < polygons.Count;
         }
 
     }
