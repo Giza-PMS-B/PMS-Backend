@@ -9,13 +9,23 @@ namespace Invoice.API.Controller
     public class InvoiceController : ControllerBase
     {
         private readonly InvoiceService _invoiceService;
-        public InvoiceController(InvoiceService invoiceService)
+        private readonly ILogger<InvoiceController> _logger;
+
+        public InvoiceController(InvoiceService invoiceService, ILogger<InvoiceController> logger)
         {
             _invoiceService = invoiceService;
+            _logger = logger;
+        }
+
+        [HttpGet("health")]
+        public IActionResult CheckHealth()
+        {
+            _logger.LogInformation("Health check requested for Invoice API");
+            return Ok(new { status = "healthy", service = "Invoice API", timestamp = DateTime.UtcNow });
         }
 
         [HttpGet]
-        public string CheckHealth()
+        public string CheckHealthLegacy()
         {
             return "Invoice API is running";
         }

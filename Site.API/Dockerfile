@@ -22,6 +22,7 @@ COPY ["SharedKernel.MessageBus.Abstraction/SharedKernel.MessageBus.Abstraction.c
 COPY ["SharedKernel.MessageBus.Kafka/SharedKernel.MessageBus.Kafka.csproj", "SharedKernel.MessageBus.Kafka/"]
 COPY ["SharedKernel.Models.Enum/SharedKernel.Models.Enum.csproj", "SharedKernel.Models.Enum/"]
 COPY ["SharedKernel.Persistent/SharedKernel.Persistent.csproj", "SharedKernel.Persistent/"]
+COPY ["SharedKernel.Logging/SharedKernel.Logging.csproj", "SharedKernel.Logging/"]
 
 RUN dotnet restore "Site.API/Site.API.csproj"
 COPY . .
@@ -35,10 +36,12 @@ RUN dotnet publish "Site.API.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:
 FROM base AS final
 WORKDIR /app
 RUN addgroup --system --gid 1000 appgroup && \
-    adduser --system --uid 1000 --ingroup appgroup --shell /bin/sh appuser
+    adduser --system --uid 1000 --ingroup appgroup --shell /bin/sh appuser && \
+    mkdir -p /app/logs && \
+    chown -R appuser:appgroup /app/logs
 COPY --from=publish /app/publish .
 RUN chown -R appuser:appgroup /app
 USER appuser
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl --fail http://localhost:8080/health || exit 1
+    CMD curl --fail http://localhost:8080/api/site/health || exit 1
 ENTRYPOINT ["dotnet", "Site.API.dll"]
