@@ -1,9 +1,12 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.Security;
+using SharedKernel.EventDriven.Abstraction;
 using SharedKernel.Infrastructure.Persistent.Abstraction;
+using SharedKernel.MessageBus.Abstraction;
 using Site.Application.DTO;
 using Site.Model.Entities;
+using Site.Model.Shared.Events;
 
 namespace Site.Application.Services;
 
@@ -11,11 +14,13 @@ public class SiteService
 {
     private readonly IRepo<Model.Entities.Site> _siteRepository;
     private readonly IUOW _uow;
+    private readonly IIntegrationEventProducer _eventProducer;
 
-    public SiteService(IRepo<Model.Entities.Site> siteRepository, IUOW uow)
+    public SiteService(IRepo<Model.Entities.Site> siteRepository, IUOW uow, IIntegrationEventProducer eventProducer)
     {
         _siteRepository = siteRepository;
         _uow = uow;
+        _eventProducer = eventProducer;
     }
 
     public async Task<List<Model.Entities.Site>> GetAllChildSitesOf(Guid parentId)
@@ -35,6 +40,17 @@ public class SiteService
     {
         var parentSite = CreateParentSite(dto);
         await _siteRepository.AddAsync(parentSite);
+        var siteCreatedEvent = new SiteCreatedEvent
+        {
+            SiteId = parentSite.Id,
+            NameEn = parentSite.NameEn,
+            NameAr = parentSite.NameAr,
+            Path = parentSite.Path,
+            IsLeaf = parentSite.IsLeaf,
+        };
+
+        _eventProducer.Enqueue(siteCreatedEvent);
+
         await _uow.SaveChangesAsync();
         return parentSite;
     }
@@ -55,6 +71,20 @@ public class SiteService
     {
         var leafSite = CreateLeafSite(dto);
         await _siteRepository.AddAsync(leafSite);
+        var siteCreatedEvent = new SiteCreatedEvent
+        {
+            SiteId = leafSite.Id,
+            NameEn = leafSite.NameEn,
+            NameAr = leafSite.NameAr,
+            Path = leafSite.Path,
+            IsLeaf = leafSite.IsLeaf,
+            PricePerHour = leafSite.PricePerHour,
+            IntegrationCode = leafSite.IntegrationCode,
+            NumberOfSolts = leafSite.NumberOfSolts,
+        };
+
+        _eventProducer.Enqueue(siteCreatedEvent);
+
         await _uow.SaveChangesAsync();
         return leafSite;
     }
