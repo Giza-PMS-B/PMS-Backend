@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Site.Application.DTO;
 using Site.Application.Services;
+using System.ComponentModel.DataAnnotations;
 
 namespace Site.API.Controller
 {
@@ -10,75 +11,144 @@ namespace Site.API.Controller
     public class SiteController : ControllerBase
     {
         private readonly SiteService _siteService;
-        private readonly ILogger<SiteController> _logger;
 
-        public SiteController(SiteService siteService, ILogger<SiteController> logger)
+        public SiteController(SiteService siteService)
         {
             _siteService = siteService;
-            _logger = logger;
         }
 
-        [HttpGet("health")]
+        /// <summary>
+        /// Health check endpoint to verify Site API is running
+        /// </summary>
+        /// <returns>Status message</returns>
+        [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         public IActionResult CheckHealth()
         {
-            _logger.LogInformation("Health check requested for Site API");
-            return Ok(new { status = "healthy", service = "Site API", timestamp = DateTime.UtcNow });
+            return Ok("Site API is running");
         }
 
-        [HttpGet]
-        public string CheckHealthLegacy()
-        {
-            return "Site API is running";
-        }
-
+        /// <summary>
+        /// Add a new parent site (Main path for parking area)
+        /// </summary>
+        /// <param name="createSiteDTO">Parent site details</param>
+        /// <returns>Created site details</returns>
         [HttpPost("add/parent")]
-        public async Task<IActionResult> AddParentSite(CreateSiteDTO createSiteDTO)
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> AddParentSite([FromBody] CreateSiteDTO createSiteDTO)
         {
-            _logger.LogInformation("Creating parent site {SiteName}", createSiteDTO.NameEn);
             try
             {
-                var site = await _siteService.CreateParentSiteAsync(createSiteDTO);
-                _logger.LogInformation("Successfully created parent site {SiteId}", site.Id);
-                return Ok("Site created successfully.");
+                var createdSite = await _siteService.CreateParentSiteAsync(createSiteDTO);
+                return Ok(new { message = "Site created successfully.", data = createdSite });
+            }
+            catch (ValidationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to create parent site {SiteName}", createSiteDTO.NameEn);
-                throw;
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { error = "An error occurred while creating the site.", details = ex.Message });
             }
         }
 
+        /// <summary>
+        /// Add a new leaf site (Available parking area slots as child below the parent site)
+        /// </summary>
+        /// <param name="createLeafSiteDTO">Leaf site details including polygons</param>
+        /// <returns>Created leaf site details</returns>
         [HttpPost("add/leaf")]
-        public async Task<IActionResult> AddLeafSite(CreateLeafSiteDTO createLeafSiteDTO)
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> AddLeafSite([FromBody] CreateLeafSiteDTO createLeafSiteDTO)
         {
-            _logger.LogInformation("Creating leaf site {SiteName}", createLeafSiteDTO.NameEn);
             try
             {
-                var site = await _siteService.CreateLeafSiteAsync(createLeafSiteDTO);
-                _logger.LogInformation("Successfully created leaf site {SiteId}", site.Id);
-                return Ok("Site created successfully.");
+                var createdSite = await _siteService.CreateLeafSiteAsync(createLeafSiteDTO);
+                return Ok(new { message = "Site created successfully.", data = createdSite });
+            }
+            catch (ValidationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to create leaf site {SiteName}", createLeafSiteDTO.NameEn);
-                throw;
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { error = "An error occurred while creating the leaf site.", details = ex.Message });
             }
         }
 
+        /// <summary>
+        /// Get all root-level sites (sites without parents)
+        /// </summary>
+        /// <returns>List of root sites</returns>
         [HttpGet("roots")]
-        public async Task<List<Model.Entities.Site>> GetRootSites()
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetRootSites()
         {
-            _logger.LogInformation("Retrieving root sites");
             try
             {
                 var sites = await _siteService.GetRootSites();
-                _logger.LogInformation("Retrieved {Count} root sites", sites.Count);
-                return sites;
+                return Ok(sites);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to retrieve root sites");
-                throw;
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { error = "An error occurred while retrieving root sites.", details = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Get all leaf sites (final level parking areas)
+        /// </summary>
+        /// <returns>List of leaf sites</returns>
+        [HttpGet("leaves")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetLeafSites()
+        {
+            try
+            {
+                var sites = await _siteService.GetLeafSites();
+                return Ok(sites);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { error = "An error occurred while retrieving leaf sites.", details = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Get all child sites of a specific parent site
+        /// </summary>
+        /// <param name="parentId">Parent site GUID</param>
+        /// <returns>List of child sites</returns>
+        [HttpGet("children/{parentId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetChildSites([FromRoute] Guid parentId)
+        {
+            try
+            {
+                if (parentId == Guid.Empty)
+                {
+                    return BadRequest(new { error = "Invalid parent ID." });
+                }
+
+                var sites = await _siteService.GetAllChildSitesOf(parentId);
+                return Ok(sites);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { error = "An error occurred while retrieving child sites.", details = ex.Message });
             }
         }
     }
