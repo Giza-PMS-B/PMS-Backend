@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharedKernel.MessageBus.Abstraction;
 using SharedKernel.MessageBus.Kafka.Configurations;
+using Site.Model.Shared.Events;
 
 namespace SharedKernel.MessageBus.Kafka
 {
@@ -43,7 +44,7 @@ namespace SharedKernel.MessageBus.Kafka
             CancellationToken cancellationToken = default)
             where TEvent : IntegrationEvent
         {
-            var topic = _resolver.Resolve<TEvent>();
+            var topic = _resolver.Resolve<SiteCreatedEvent>();
             _logger.LogInformation("Successfully created Topic Name {topic}", topic);
             var kafkaMessage = new Message<string, byte[]>
             {
