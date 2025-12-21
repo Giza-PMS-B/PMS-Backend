@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.Security;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SharedKernel.EventDriven.Abstraction;
 using SharedKernel.Infrastructure.Persistent.Abstraction;
@@ -28,18 +29,33 @@ public class SiteService
 
     public async Task<List<SiteResponseDTO>> GetAllChildSitesOf(Guid parentId)
     {
-        var sites = _siteRepository.GetAll().Where(s => s.ParentId == parentId).ToList();
-        return sites.Select(MapToResponseDTO).ToList();
+        var sites = _siteRepository.GetAll()
+            .Include(s => s.Polygons)
+                .ThenInclude(p => p.PolygonPoints)
+            .Where(s => s.ParentId == parentId)
+            .ToList();
+        return sites.Select(s => MapToResponseDTO(s)).ToList();
     }
     public async Task<List<SiteResponseDTO>> GetLeafSites()
     {
-        var sites = _siteRepository.GetAll().Where(s => s.IsLeaf == true).ToList();
-        return sites.Select(MapToResponseDTO).ToList();
+        var sites = _siteRepository.GetAll()
+            .Include(s => s.Polygons)
+                .ThenInclude(p => p.PolygonPoints)
+            .Where(s => s.IsLeaf == true)
+            .ToList();
+        return sites.Select(s => MapToResponseDTO(s)).ToList();
     }
     public async Task<List<SiteResponseDTO>> GetRootSites()
     {
-        var sites = _siteRepository.GetAll().Where(s => s.ParentId == null).ToList();
-        return sites.Select(MapToResponseDTO).ToList();
+        var sites = _siteRepository.GetAll()
+            .Include(s => s.Children)
+                .ThenInclude(c => c.Polygons)
+                    .ThenInclude(p => p.PolygonPoints)
+            .Include(s => s.Polygons)
+                .ThenInclude(p => p.PolygonPoints)
+            .Where(s => s.ParentId == null)
+            .ToList();
+        return sites.Select(s => MapToResponseDTO(s, includeChildren: true)).ToList();
     }
 
     public async Task<SiteResponseDTO> CreateParentSiteAsync(CreateSiteDTO dto)
@@ -203,9 +219,9 @@ public class SiteService
     }
 
 
-    private static SiteResponseDTO MapToResponseDTO(Model.Entities.Site site)
+    private static SiteResponseDTO MapToResponseDTO(Model.Entities.Site site, bool includeChildren = false)
     {
-        return new SiteResponseDTO
+        var dto = new SiteResponseDTO
         {
             Id = site.Id,
             Path = site.Path,
@@ -216,19 +232,25 @@ public class SiteService
             NumberOfSolts = site.NumberOfSolts,
             IsLeaf = site.IsLeaf,
             ParentId = site.ParentId,
-            Polygons = site.Polygons.Select(p => new PolygonResponseDTO
+            Polygons = site.Polygons?.Select(p => new PolygonResponseDTO
             {
                 Id = p.Id,
                 Name = p.Name,
-                PolygonPoints = p.PolygonPoints.Select(pp => new PolygonPointResponseDTO
+                PolygonPoints = p.PolygonPoints?.Select(pp => new PolygonPointResponseDTO
                 {
                     Latitude = pp.Latitude,
                     Longitude = pp.Longitude
-                }).ToList()
-            }).ToList()
+                }).ToList() ?? new List<PolygonPointResponseDTO>()
+            }).ToList() ?? new List<PolygonResponseDTO>()
         };
+
+        if (includeChildren && site.Children != null && site.Children.Any())
+        {
+            dto.Children = site.Children.Select(child => MapToResponseDTO(child, false)).ToList();
+        }
+
+        return dto;
     }
 
-}
-
+  }
 }
