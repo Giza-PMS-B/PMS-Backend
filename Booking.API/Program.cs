@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using Booking.Application.DTO;
+using Booking.Application.EventHandlers;
 using Booking.Application.FluentValidation;
 using Booking.Application.Services;
 using Booking.Infrastrcure.Persistent;
@@ -6,8 +8,13 @@ using Booking.Model.Entities;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
+using SharedKernel.EventDriven;
+using SharedKernel.EventDriven.Abstraction;
 using SharedKernel.Infrastructure.Persistent;
 using SharedKernel.Infrastructure.Persistent.Abstraction;
+using SharedKernel.MessageBus.Abstraction;
+using SharedKernel.MessageBus.Kafka;
+using Site.Model.Shared.Events;
 
 namespace Booking.API;
 
@@ -38,35 +45,51 @@ public class Program
 
         builder.Services.AddScoped<IUOW, UOW>();
         builder.Services.AddScoped(typeof(IRepo<Ticket>), typeof(Repo<Ticket>));
-        builder.Services.AddScoped(typeof(IRepo<Site>), typeof(Repo<Site>));
+        builder.Services.AddScoped(typeof(IRepo<Model.Entities.Site>), typeof(Repo<Model.Entities.Site>));
         builder.Services.AddScoped<TicketService>();
         builder.Services.AddScoped<SiteService>();
 
 
 
-        // very importatant to uncomment that when dealing with events
-        // builder.Services.AddScoped<IIntegrationEventProducer, IntegrationEventQueue>();
-        // builder.Services.AddScoped<IIntegrationEventQueue, IntegrationEventQueue>();
+        // Enable event infrastructure
+        builder.Services.AddScoped<IIntegrationEventProducer, IntegrationEventQueue>();
+        builder.Services.AddScoped<IIntegrationEventQueue, IntegrationEventQueue>();
+        builder.Services.AddSingleton<ConcurrentQueue<IntegrationEvent>>();
 
-        // builder.Services.AddKafkaBroker(options =>
-        // {
-        //     options.BootstrapServers = "localhost:9092";
-        //     options.ClientId = "ServiceTemplate";
-        //     options.Producer = new ProducerOptions
-        //     {
-        //         Acks = Confluent.Kafka.Acks.All,
-        //         MessageTimeoutMs = 30000,
+        builder.Services.AddSingleton<IMessagePublisher, KafkaMessagePublisher>();
+        builder.Services.AddSingleton<IMessageNameResolver, DefaultMessageNameResolver>();
+        builder.Services.AddSingleton<IMessageSerializer, JsonMessageSerializer>();
 
-        //     };
-        //     options.Consumer = new ConsumerOptions
-        //     {
-        //         GroupId = "ServiceTemplateGroup",
-        //         EnableAutoCommit = false,
-        //         AutoOffsetReset = Confluent.Kafka.AutoOffsetReset.Earliest
-        //     };
-        // })
-        //     .AddKafkaConsumer<OrderCreatedEvent, OrderCreatedHandler>()
-        //     .AddKafkaConsumer<PaymentEvent, PaymentHandler>();
+        // Configure Kafka with consumer
+        builder.Services.AddKafkaBroker(options =>
+        {
+            options.BootstrapServers = builder.Configuration["Kafka:BootstrapServers"] ?? "localhost:9092";
+            options.ClientId = builder.Configuration["Kafka:ClientId"] ?? "BookingService";
+            options.Producer = new SharedKernel.MessageBus.Kafka.Configurations.ProducerOptions
+            {
+                Acks = Confluent.Kafka.Acks.All,
+                MessageTimeoutMs = 30000
+            };
+            options.Consumer = new SharedKernel.MessageBus.Kafka.Configurations.ConsumerOptions
+            {
+                GroupId = builder.Configuration["Kafka:Consumer:GroupId"] ?? "BookingServiceGroup",
+                EnableAutoCommit = false,
+                AutoOffsetReset = Confluent.Kafka.AutoOffsetReset.Earliest
+            };
+        })
+        .AddKafkaConsumer<SiteCreatedEvent, SiteCreatedEventHandler>();
+
+        // Register the handler
+        builder.Services.AddScoped<IMessageHandler<SiteCreatedEvent>, SiteCreatedEventHandler>();
+
+        // Register the handler
+
+        // Update UOW registration
+        builder.Services.AddScoped<IUOW>(provider => new UOW(
+            provider.GetRequiredService<DbContext>(),
+            provider.GetRequiredService<IMessagePublisher>(),
+            provider.GetRequiredService<IIntegrationEventQueue>()
+        ));
 
 
         var app = builder.Build();

@@ -8,10 +8,10 @@ namespace Booking.Application.Services;
 public class TicketService
 {
     private readonly IRepo<Ticket> _ticketRepository;
-    private readonly IRepo<Site> _siteRepository;
+    private readonly IRepo<Model.Entities.Site> _siteRepository;
     private readonly IUOW _uow;
 
-    public TicketService(IRepo<Ticket> ticketRepository,IRepo<Site>siteRepository, IUOW uow)
+    public TicketService(IRepo<Ticket> ticketRepository, IRepo<Model.Entities.Site> siteRepository, IUOW uow)
     {
         _ticketRepository = ticketRepository;
         _siteRepository = siteRepository;
@@ -21,7 +21,7 @@ public class TicketService
 
     {
         await ValidateSiteExistsAsync(createTicketDTO.SiteId);
-       
+
 
         var bookingFrom = DateTime.UtcNow;
         var bookingTo = bookingFrom.AddHours(createTicketDTO.NoOfHours);
