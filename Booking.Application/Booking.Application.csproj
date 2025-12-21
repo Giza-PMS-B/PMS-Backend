@@ -14,6 +14,7 @@
 
     <ItemGroup>
       <Folder Include="DTO/" />
+      <Folder Include="EventHandlers/" />
       <Folder Include="FluentValidation/" />
       <Folder Include="Services/" />
     </ItemGroup>
