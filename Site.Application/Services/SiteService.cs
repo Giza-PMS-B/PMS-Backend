@@ -26,22 +26,28 @@ public class SiteService
         _logger = logger;
     }
 
-    public async Task<List<Model.Entities.Site>> GetAllChildSitesOf(Guid parentId)
+    public async Task<List<SiteResponseDTO>> GetAllChildSitesOf(Guid parentId)
     {
-        return _siteRepository.GetAll().Where(s => s.ParentId == parentId).ToList();
+        var sites = _siteRepository.GetAll().Where(s => s.ParentId == parentId).ToList();
+        return sites.Select(MapToResponseDTO).ToList();
     }
-    public async Task<List<Model.Entities.Site>> GetLeafSites()
+    public async Task<List<SiteResponseDTO>> GetLeafSites()
     {
-        return _siteRepository.GetAll().Where(s => s.IsLeaf == true).ToList();
+        var sites = _siteRepository.GetAll().Where(s => s.IsLeaf == true).ToList();
+        return sites.Select(MapToResponseDTO).ToList();
     }
-    public async Task<List<Model.Entities.Site>> GetRootSites()
+    public async Task<List<SiteResponseDTO>> GetRootSites()
     {
-        return _siteRepository.GetAll().Where(s => s.ParentId == null).ToList();
+        var sites = _siteRepository.GetAll().Where(s => s.ParentId == null).ToList();
+        return sites.Select(MapToResponseDTO).ToList();
     }
 
-    public async Task<Model.Entities.Site> CreateParentSiteAsync(CreateSiteDTO dto)
+    public async Task<SiteResponseDTO> CreateParentSiteAsync(CreateSiteDTO dto)
     {
-        _logger.LogInformation("Creating parent site {SiteName} at path {Path}", dto.NameEn, dto.Path);
+
+        ValidateSiteNameUniqueness(dto.NameEn, dto.NameAr);
+
+        _logger.LogInformation("start Creating parent site {SiteName} at path {Path}", dto.NameEn, dto.Path);
         
         var parentSite = CreateParentSite(dto);
         await _siteRepository.AddAsync(parentSite);
@@ -59,6 +65,8 @@ public class SiteService
         _logger.LogInformation("Enqueued SiteCreatedEvent for site {SiteId}", parentSite.Id);
 
         await _uow.SaveChangesAsync();
+
+        return MapToResponseDTO(parentSite);
         _logger.LogInformation("Successfully created parent site {SiteId}", parentSite.Id);
         
         return parentSite;
@@ -76,10 +84,15 @@ public class SiteService
         };
     }
 
-    public async Task<Model.Entities.Site> CreateLeafSiteAsync(CreateLeafSiteDTO dto)
+    public async Task<SiteResponseDTO> CreateLeafSiteAsync(CreateLeafSiteDTO dto)
     {
+        ValidateSiteNameUniqueness(dto.NameEn, dto.NameAr);
+        ValidateIntegrationCodeUniqueness(dto.IntegrationCode);
+
+
         _logger.LogInformation("Creating leaf site {SiteName} with {PolygonCount} polygons", dto.NameEn, dto.Polygons?.Count ?? 0);
         
+
         var leafSite = CreateLeafSite(dto);
         await _siteRepository.AddAsync(leafSite);
         
@@ -99,9 +112,10 @@ public class SiteService
         _logger.LogInformation("Enqueued SiteCreatedEvent for leaf site {SiteId}", leafSite.Id);
 
         await _uow.SaveChangesAsync();
-        _logger.LogInformation("Successfully created leaf site {SiteId}", leafSite.Id);
-        
-        return leafSite;
+      
+       _logger.LogInformation("Successfully created leaf site {SiteId}", leafSite.Id);
+         
+        return MapToResponseDTO(leafSite);
     }
 
     private Model.Entities.Site CreateLeafSite(CreateLeafSiteDTO dto)
@@ -123,6 +137,31 @@ public class SiteService
 
         AddPolygons(dto, leafSite);
         return leafSite;
+    }
+
+    private void ValidateSiteNameUniqueness(string nameEn, string nameAr)
+    {
+        var existingByNameEn = _siteRepository.GetAll()
+            .FirstOrDefault(s => s.NameEn.ToLower() == nameEn.ToLower());
+
+        if (existingByNameEn != null)
+            throw new ValidationException("These Values are already exists");
+
+        var existingByNameAr = _siteRepository.GetAll()
+            .FirstOrDefault(s => s.NameAr.ToLower() == nameAr.ToLower());
+
+        if (existingByNameAr != null)
+            throw new ValidationException("These Values are already exists");
+    }
+
+    private void ValidateIntegrationCodeUniqueness(string integrationCode)
+    {
+        var existing = _siteRepository.GetAll()
+            .FirstOrDefault(s => s.IntegrationCode != null &&
+                                 s.IntegrationCode.ToLower() == integrationCode.ToLower());
+
+        if (existing != null)
+            throw new ValidationException("These Values are already exists");
     }
 
     private static void ValidateLeafSite(CreateLeafSiteDTO dto)
@@ -162,5 +201,34 @@ public class SiteService
             site.Polygons.Add(polygon);
         }
     }
+
+
+    private static SiteResponseDTO MapToResponseDTO(Model.Entities.Site site)
+    {
+        return new SiteResponseDTO
+        {
+            Id = site.Id,
+            Path = site.Path,
+            NameEn = site.NameEn,
+            NameAr = site.NameAr,
+            PricePerHour = site.PricePerHour,
+            IntegrationCode = site.IntegrationCode,
+            NumberOfSolts = site.NumberOfSolts,
+            IsLeaf = site.IsLeaf,
+            ParentId = site.ParentId,
+            Polygons = site.Polygons.Select(p => new PolygonResponseDTO
+            {
+                Id = p.Id,
+                Name = p.Name,
+                PolygonPoints = p.PolygonPoints.Select(pp => new PolygonPointResponseDTO
+                {
+                    Latitude = pp.Latitude,
+                    Longitude = pp.Longitude
+                }).ToList()
+            }).ToList()
+        };
+    }
+
+}
 
 }
