@@ -1,6 +1,7 @@
 using Booking.Application.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Booking.Application.DTO;
 
 namespace Booking.API.Controller
 {
@@ -18,6 +19,13 @@ namespace Booking.API.Controller
         public string CheckHealth()
         {
             return "Booking API is running";
+        }
+
+        [HttpPost()]
+        public async Task<IActionResult> CreateTicket(CreateTicketDTO createTicketDTO)
+        {
+            var ticket=await _ticketService.CreateTicketAsync(createTicketDTO);
+            return Ok(ticket);
         }
     }
 }
