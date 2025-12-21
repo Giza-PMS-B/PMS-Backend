@@ -27,6 +27,7 @@
       <ProjectReference Include="../SharedKernel.EventDriven/SharedKernel.EventDriven.csproj" />
       <ProjectReference Include="../SharedKernel.Infratsrucrure.Persistent/SharedKernel.Infratsrucrure.Persistent.csproj" />
       <ProjectReference Include="../Site.Infrastrcure.Persistent/Site.Infrastrcure.Persistent.csproj" />
+      <ProjectReference Include="../SharedKernel.Logging/SharedKernel.Logging.csproj" />
       
     </ItemGroup>
 
