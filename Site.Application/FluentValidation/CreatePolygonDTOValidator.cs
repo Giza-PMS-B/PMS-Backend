@@ -15,9 +15,23 @@ public class CreatePolygonDTOValidator : AbstractValidator<CreatePolygonDTO>
         RuleFor(x => x.Points)
             .NotEmpty().WithMessage("Polygon must have at least 3 coordinate points")
             .Must(points => points != null && points.Count >= 3)
-            .WithMessage("Polygon must have at least 3 coordinate points");
+            .WithMessage("Polygon must have at least 3 coordinate points")
+            .Must(points => !HasDuplicatePoints(points))
+            .WithMessage("Duplicate points are not allowed in the polygon");
 
         RuleForEach(x => x.Points)
             .SetValidator(new CreatePolygonPointDTOValidator());
+    }
+
+    private bool HasDuplicatePoints(List<CreatePolygonPointDTO> points)
+    {
+        if (points == null) return false;
+
+        var distinctPoints = points
+            .Select(p => new { p.Latitude, p.Longitude })
+            .Distinct()
+            .Count();
+
+        return distinctPoints < points.Count;
     }
 }

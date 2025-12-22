@@ -42,7 +42,7 @@ namespace Site.API.Controller
             try
             {
                 var createdSite = await _siteService.CreateParentSiteAsync(createSiteDTO);
-                return Ok(new { message = "Site created successfully.", data = createdSite });
+                return Ok(new { message = "Parent site created successfully.", data = createdSite });
             }
             catch (ValidationException ex)
             {
@@ -51,7 +51,7 @@ namespace Site.API.Controller
             catch (Exception ex)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError,
-                    new { error = "An error occurred while creating the site.", details = ex.Message });
+                    new { error = "An error occurred while creating the parent site.", details = ex.Message });
             }
         }
 
@@ -69,7 +69,7 @@ namespace Site.API.Controller
             try
             {
                 var createdSite = await _siteService.CreateLeafSiteAsync(createLeafSiteDTO);
-                return Ok(new { message = "Site created successfully.", data = createdSite });
+                return Ok(new { message = "Leaf site created successfully.", data = createdSite });
             }
             catch (ValidationException ex)
             {
