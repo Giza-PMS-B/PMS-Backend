@@ -39,7 +39,7 @@ public class TicketService
         };
 
         await _ticketRepository.AddAsync(ticket);
-        await _uow.SaveChangesAsync();
+        await _uow.SaveChangesAsync(2);
 
         return ticket;
     }

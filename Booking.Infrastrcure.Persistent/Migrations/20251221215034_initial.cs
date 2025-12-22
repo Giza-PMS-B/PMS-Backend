@@ -1,13 +1,12 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
-
 #nullable disable
 
 namespace Booking.Infrastrcure.Persistent.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -20,9 +19,10 @@ namespace Booking.Infrastrcure.Persistent.Migrations
                     Path = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     NameEn = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     NameAr = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    PricePerHour = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    IntegrationCode = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    NumberOfSolts = table.Column<int>(type: "int", nullable: false)
+                    PricePerHour = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    IntegrationCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    NumberOfSolts = table.Column<int>(type: "int", nullable: true),
+                    IsLeaf = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {

@@ -29,8 +29,10 @@ namespace Booking.Infrastrcure.Persistent.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("IntegrationCode")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsLeaf")
+                        .HasColumnType("bit");
 
                     b.Property<string>("NameAr")
                         .IsRequired()
@@ -42,14 +44,14 @@ namespace Booking.Infrastrcure.Persistent.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<int>("NumberOfSolts")
+                    b.Property<int?>("NumberOfSolts")
                         .HasColumnType("int");
 
                     b.Property<string>("Path")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<decimal>("PricePerHour")
+                    b.Property<decimal?>("PricePerHour")
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
