@@ -160,13 +160,13 @@ public class SiteService
             .FirstOrDefault(s => s.NameEn.ToLower() == nameEn.ToLower());
 
         if (existingByNameEn != null)
-            throw new ValidationException("These Values are already exists");
+            throw new ValidationException("The site name is already existed");
 
         var existingByNameAr = _siteRepository.GetAll()
             .FirstOrDefault(s => s.NameAr.ToLower() == nameAr.ToLower());
 
         if (existingByNameAr != null)
-            throw new ValidationException("These Values are already exists");
+            throw new ValidationException("The site name is already existed");
     }
 
     private void ValidateIntegrationCodeUniqueness(string integrationCode)
@@ -176,7 +176,7 @@ public class SiteService
                                  s.IntegrationCode.ToLower() == integrationCode.ToLower());
 
         if (existing != null)
-            throw new ValidationException("These Values are already exists");
+            throw new ValidationException("Integration Code already exists");
     }
 
     private static void ValidateLeafSite(CreateLeafSiteDTO dto)
