@@ -5,9 +5,9 @@ namespace Site.Model.Shared.Events;
 public record SiteCreatedEvent : IntegrationEvent
 {
     public Guid SiteId { get; init; }
-    public string NameEn { get; init; } = string.Empty;
-    public string NameAr { get; init; } = string.Empty;
-    public string Path { get; init; } = string.Empty;
+    public string NameEn { get; init; }
+    public string NameAr { get; init; }
+    public string Path { get; init; }
     public bool IsLeaf { get; init; }
     public decimal? PricePerHour { get; init; }
     public string? IntegrationCode { get; init; }

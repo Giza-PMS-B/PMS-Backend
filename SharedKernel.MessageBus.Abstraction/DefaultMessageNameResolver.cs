@@ -16,5 +16,13 @@ namespace SharedKernel.MessageBus.Abstraction
             name = Regex.Replace(name, "([a-z])([A-Z])", "$1-$2");
             return name.ToLowerInvariant();
         }
+        public string Resolve(Type type)
+        {
+            var name = type.Name;
+            name = Regex.Replace(name, "Event$", "");
+            name = Regex.Replace(name, "([a-z])([A-Z])", "$1-$2");
+            return name.ToLowerInvariant();
+        }
+
     }
 }

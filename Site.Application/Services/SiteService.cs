@@ -42,10 +42,10 @@ public class SiteService
     public async Task<Model.Entities.Site> CreateParentSiteAsync(CreateSiteDTO dto)
     {
         _logger.LogInformation("Creating parent site {SiteName} at path {Path}", dto.NameEn, dto.Path);
-        
+
         var parentSite = CreateParentSite(dto);
         await _siteRepository.AddAsync(parentSite);
-        
+
         var siteCreatedEvent = new SiteCreatedEvent
         {
             SiteId = parentSite.Id,
@@ -58,9 +58,9 @@ public class SiteService
         _eventProducer.Enqueue(siteCreatedEvent);
         _logger.LogInformation("Enqueued SiteCreatedEvent for site {SiteId}", parentSite.Id);
 
-        await _uow.SaveChangesAsync();
+        await _uow.SaveChangesAsync(1);
         _logger.LogInformation("Successfully created parent site {SiteId}", parentSite.Id);
-        
+
         return parentSite;
     }
     private static Model.Entities.Site CreateParentSite(CreateSiteDTO dto)
@@ -79,10 +79,10 @@ public class SiteService
     public async Task<Model.Entities.Site> CreateLeafSiteAsync(CreateLeafSiteDTO dto)
     {
         _logger.LogInformation("Creating leaf site {SiteName} with {PolygonCount} polygons", dto.NameEn, dto.Polygons?.Count ?? 0);
-        
+
         var leafSite = CreateLeafSite(dto);
         await _siteRepository.AddAsync(leafSite);
-        
+
         var siteCreatedEvent = new SiteCreatedEvent
         {
             SiteId = leafSite.Id,
@@ -98,9 +98,9 @@ public class SiteService
         _eventProducer.Enqueue(siteCreatedEvent);
         _logger.LogInformation("Enqueued SiteCreatedEvent for leaf site {SiteId}", leafSite.Id);
 
-        await _uow.SaveChangesAsync();
+        await _uow.SaveChangesAsync(1);
         _logger.LogInformation("Successfully created leaf site {SiteId}", leafSite.Id);
-        
+
         return leafSite;
     }
 

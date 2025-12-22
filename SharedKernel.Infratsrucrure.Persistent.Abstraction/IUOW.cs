@@ -8,6 +8,6 @@ namespace SharedKernel.Infrastructure.Persistent.Abstraction
 {
     public interface IUOW
     {
-        public Task SaveChangesAsync();
+        public Task SaveChangesAsync(int topicNumber = 0);
     }
 }

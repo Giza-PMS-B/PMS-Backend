@@ -55,19 +55,21 @@ namespace SharedKernel.MessageBus.Kafka
                 try
                 {
                     var result = consumer.Consume(stoppingToken);
-                    _logger.LogDebug("Received message from topic {TopicName}, partition {Partition}, offset {Offset}", 
+                    _logger.LogDebug("Received message from topic {TopicName}, partition {Partition}, offset {Offset}",
                         result.Topic, result.Partition, result.Offset);
 
                     using var scope = _provider.CreateScope();
                     var handler = scope.ServiceProvider
                         .GetRequiredService<IMessageHandler<TEvent>>();
-
+                    _logger.LogInformation("message before Desrialization {message}", result.Message.Value);
                     var message = _serializer.Deserialize<TEvent>(result.Message.Value);
+                    _logger.LogInformation("Desrialized Message {message}", message);
+
                     _logger.LogInformation("Processing message of type {MessageType}", typeof(TEvent).Name);
 
                     handler.HandleAsync(message, stoppingToken).GetAwaiter().GetResult();
                     consumer.Commit(result);
-                    
+
                     _logger.LogDebug("Successfully processed and committed message from offset {Offset}", result.Offset);
                 }
                 catch (OperationCanceledException)

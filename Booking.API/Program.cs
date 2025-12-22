@@ -26,6 +26,18 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("AllowAll",
+                policy =>
+                {
+                    policy
+                        .AllowAnyOrigin()
+                        .AllowAnyHeader()
+                        .AllowAnyMethod();
+                });
+        });
+
         // Add Serilog logging
         builder.AddSerilogLogging();
 
@@ -110,6 +122,7 @@ public class Program
             app.UseSwaggerUI();
         }
 
+        app.UseCors("AllowAll");
         // Add logging middleware
         app.UseSharedKernelLogging();
 
