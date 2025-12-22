@@ -80,7 +80,7 @@ public class SiteService
         _eventProducer.Enqueue(siteCreatedEvent);
         _logger.LogInformation("Enqueued SiteCreatedEvent for site {SiteId}", parentSite.Id);
 
-        await _uow.SaveChangesAsync();
+        await _uow.SaveChangesAsync(1);
 
         _logger.LogInformation("Successfully created parent site {SiteId}", parentSite.Id);
         return MapToResponseDTO(parentSite);
@@ -126,7 +126,7 @@ public class SiteService
         _eventProducer.Enqueue(siteCreatedEvent);
         _logger.LogInformation("Enqueued SiteCreatedEvent for leaf site {SiteId}", leafSite.Id);
 
-        await _uow.SaveChangesAsync();
+        await _uow.SaveChangesAsync(1);
 
         _logger.LogInformation("Successfully created leaf site {SiteId}", leafSite.Id);
 
