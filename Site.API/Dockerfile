@@ -1,4 +1,4 @@
-﻿FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
 EXPOSE 8080
 
@@ -36,13 +36,24 @@ RUN dotnet publish "Site.API.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:
 
 FROM base AS final
 WORKDIR /app
+
+# ---------- ADD WAIT SCRIPT ----------
+COPY wait-for-dependencies.sh /wait-for-dependencies.sh
+RUN chmod +x /wait-for-dependencies.sh
+# -----------------------------------
+
 RUN addgroup --system --gid 1000 appgroup && \
     adduser --system --uid 1000 --ingroup appgroup --shell /bin/sh appuser && \
     mkdir -p /app/logs && \
     chown -R appuser:appgroup /app/logs
+
 COPY --from=publish /app/publish .
 RUN chown -R appuser:appgroup /app
 USER appuser
+
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl --fail http://localhost:8080/api/site/health || exit 1
-ENTRYPOINT ["dotnet", "Site.API.dll"]
+
+# ---------- CHANGE ENTRYPOINT ----------
+ENTRYPOINT ["/wait-for-dependencies.sh", "dotnet", "Site.API.dll"]
+# -------------------------------------
