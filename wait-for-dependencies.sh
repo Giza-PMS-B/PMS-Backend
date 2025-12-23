@@ -20,23 +20,23 @@ echo "Kafka topic is available."
 # -------------------------------------------------
 # SQL Server readiness check (COMMENTED ON PURPOSE)
 # -------------------------------------------------
-# echo "Waiting for SQL Server..."
-#
-# until docker run --rm \
-#   --network pms-backend_pms-network \
-#   mcr.microsoft.com/mssql-tools \
-#   /opt/mssql-tools/bin/sqlcmd \
-#     -S sqlserver \
-#     -U sa \
-#     -P "$SA_PASSWORD" \
-#     -C \
-#     -Q "SELECT 1" \
-#     >/dev/null 2>&1; do
-#   echo "SQL Server not ready yet..."
-#   sleep 5
-# done
-#
-# echo "SQL Server is ready."
+ echo "Waiting for SQL Server..."
+
+ until docker run --rm \
+   --network pms-backend_pms-network \
+   mcr.microsoft.com/mssql-tools \
+   /opt/mssql-tools/bin/sqlcmd \
+     -S sqlserver \
+     -U sa \
+     -P "$SA_PASSWORD" \
+     -C \
+     -Q "SELECT 1" \
+     >/dev/null 2>&1; do
+   echo "SQL Server not ready yet..."
+   sleep 5
+ done
+
+ echo "SQL Server is ready."
 # -------------------------------------------------
 
 echo "Starting application..."
