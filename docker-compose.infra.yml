@@ -98,8 +98,6 @@ networks:
   pms-network:
     driver: overlay
     attachable: true
-    name: pms-network
-
 # ===============================
 # Volumes (EXPLICIT – same as devs)
 # ===============================
