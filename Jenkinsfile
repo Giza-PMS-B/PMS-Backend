@@ -139,15 +139,33 @@ pipeline {
             steps {
                 sh '''
                   echo "Waiting for Zookeeper to be ready..."
-                  until docker run --rm \
-                    --network ${STACK_NAME}_pms-network \
-                    confluentinc/cp-zookeeper:7.6.0 \
-                    bash -c "nc -z zookeeper 2181" \
-                    >/dev/null 2>&1; do
-                    echo "Zookeeper not ready yet..."
+                  MAX_WAIT=120
+                  ELAPSED=0
+                  
+                  # First, wait for service to have running tasks
+                  while [ $ELAPSED -lt $MAX_WAIT ]; do
+                    RUNNING=$(docker service ps ${STACK_NAME}_zookeeper --filter "desired-state=running" --format "{{.CurrentState}}" 2>/dev/null | grep -c "Running" || echo "0")
+                    
+                    if [ "$RUNNING" -gt "0" ]; then
+                      # Service has running tasks, test connectivity
+                      if docker run --rm \
+                        --network ${STACK_NAME}_pms-network \
+                        confluentinc/cp-zookeeper:7.6.0 \
+                        bash -c "nc -z zookeeper 2181" \
+                        >/dev/null 2>&1; then
+                        echo "✅ Zookeeper is ready"
+                        exit 0
+                      fi
+                    fi
+                    
+                    echo "Zookeeper not ready yet... (${ELAPSED}s)"
                     sleep 5
+                    ELAPSED=$((ELAPSED + 5))
                   done
-                  echo "✅ Zookeeper is ready"
+                  
+                  echo "⚠️  Timeout waiting for Zookeeper"
+                  docker service ps ${STACK_NAME}_zookeeper
+                  exit 1
                 '''
             }
         }
@@ -159,28 +177,47 @@ pipeline {
             steps {
                 sh '''
                   echo "Waiting for Kafka to be ready..."
-                  until docker run --rm \
-                    --network ${STACK_NAME}_pms-network \
-                    confluentinc/cp-kafka:7.6.0 \
-                    kafka-broker-api-versions \
-                      --bootstrap-server kafka:9092 \
-                      >/dev/null 2>&1; do
-                    echo "Kafka not ready yet..."
-                    sleep 5
-                  done
-                  echo "✅ Kafka is ready"
+                  MAX_WAIT=180
+                  ELAPSED=0
                   
-                  # Create Kafka topics
-                  echo "Creating Kafka topics..."
-                  docker run --rm \
-                    --network ${STACK_NAME}_pms-network \
-                    confluentinc/cp-kafka:7.6.0 \
-                    kafka-topics \
-                      --bootstrap-server kafka:9092 \
-                      --create --if-not-exists \
-                      --topic site-created \
-                      --partitions 1 \
-                      --replication-factor 1 || echo "Topic creation skipped or already exists"
+                  # First, wait for service to have running tasks
+                  while [ $ELAPSED -lt $MAX_WAIT ]; do
+                    RUNNING=$(docker service ps ${STACK_NAME}_kafka --filter "desired-state=running" --format "{{.CurrentState}}" 2>/dev/null | grep -c "Running" || echo "0")
+                    
+                    if [ "$RUNNING" -gt "0" ]; then
+                      # Service has running tasks, test connectivity
+                      if docker run --rm \
+                        --network ${STACK_NAME}_pms-network \
+                        confluentinc/cp-kafka:7.6.0 \
+                        kafka-broker-api-versions \
+                          --bootstrap-server kafka:9092 \
+                          >/dev/null 2>&1; then
+                        echo "✅ Kafka is ready"
+                        
+                        # Create Kafka topics
+                        echo "Creating Kafka topics..."
+                        docker run --rm \
+                          --network ${STACK_NAME}_pms-network \
+                          confluentinc/cp-kafka:7.6.0 \
+                          kafka-topics \
+                            --bootstrap-server kafka:9092 \
+                            --create --if-not-exists \
+                            --topic site-created \
+                            --partitions 1 \
+                            --replication-factor 1 || echo "Topic creation skipped or already exists"
+                        
+                        exit 0
+                      fi
+                    fi
+                    
+                    echo "Kafka not ready yet... (${ELAPSED}s)"
+                    sleep 5
+                    ELAPSED=$((ELAPSED + 5))
+                  done
+                  
+                  echo "⚠️  Timeout waiting for Kafka"
+                  docker service ps ${STACK_NAME}_kafka
+                  exit 1
                 '''
             }
         }
