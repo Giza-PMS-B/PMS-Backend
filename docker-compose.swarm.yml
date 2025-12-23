@@ -1,0 +1,230 @@
+# Shared environment configuration for .NET services
+x-dotnet-environment: &dotnet-environment
+  ASPNETCORE_ENVIRONMENT: ${ENVIRONMENT:-Development}
+  ASPNETCORE_HTTP_PORTS: 8080
+  Kafka__BootstrapServers: kafka:9092
+  Kafka__Producer__Acks: ${KAFKA_PRODUCER_ACKS:-all}
+  Kafka__Producer__MessageTimeoutMs: ${KAFKA_PRODUCER_MESSAGE_TIMEOUT_MS:-30000}
+  Kafka__Consumer__EnableAutoCommit: ${KAFKA_CONSUMER_ENABLE_AUTO_COMMIT:-false}
+  Kafka__Consumer__AutoOffsetReset: ${KAFKA_CONSUMER_AUTO_OFFSET_RESET:-earliest}
+
+# Shared service dependencies for Swarm
+x-dotnet-service: &dotnet-service
+  networks:
+    - pms-network
+
+services:
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - pms-network
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - "com.pms.deployment.phase=infrastructure"
+        - "com.pms.dependency=kafka"
+
+  # Infrastructure Services
+
+  # Zookeeper - Required for Kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - pms-network
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      labels:
+        - "com.pms.deployment.phase=infrastructure"
+        - "com.pms.dependency=base"
+
+  # Kafka Message Broker
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    networks:
+      - pms-network
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      labels:
+        - "com.pms.deployment.phase=infrastructure"
+        - "com.pms.dependency=zookeeper"
+
+  # SQL Server Database - Local Docker Container
+  # Each service gets its own database: PMS_Booking, PMS_Invoice, PMS_Site
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    ports:
+      - "1433:1433"
+    networks:
+      - pms-network
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${SA_PASSWORD:-YourStrong@Passw0rd}
+      MSSQL_PID: "Developer"
+    volumes:
+      - new_sql_data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$${SA_PASSWORD:-YourStrong@Passw0rd}" -C -Q "SELECT 1" || exit 1
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      labels:
+        - "com.pms.deployment.phase=infrastructure"
+        - "com.pms.dependency=kafka"
+
+  # Application Services
+
+  # Booking Service
+  booking-service:
+    <<: *dotnet-service
+    image: ${BOOKING_IMAGE:-pms-booking-service:latest}
+    ports:
+      - "${BOOKING_SERVICE_PORT:-5001}:8080"
+    environment:
+      <<: *dotnet-environment
+      Kafka__ClientId: BookingService
+      Kafka__Consumer__GroupId: BookingServiceGroup
+      ConnectionStrings__DefaultConnection: ${BOOKING_DB_CONNECTION:-Server=sqlserver;Database=PMS_Booking;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;MultipleActiveResultSets=True;}
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      labels:
+        - "com.pms.deployment.phase=application"
+        - "com.pms.dependency=sqlserver,kafka"
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  # Invoice Service
+  invoice-service:
+    <<: *dotnet-service
+    image: ${INVOICE_IMAGE:-pms-invoice-service:latest}
+    ports:
+      - "${INVOICE_SERVICE_PORT:-5002}:8080"
+    environment:
+      <<: *dotnet-environment
+      Kafka__ClientId: InvoiceService
+      Kafka__Consumer__GroupId: InvoiceServiceGroup
+      ConnectionStrings__DefaultConnection: ${INVOICE_DB_CONNECTION:-Server=sqlserver;Database=PMS_Invoice;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;MultipleActiveResultSets=True;}
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      labels:
+        - "com.pms.deployment.phase=application"
+        - "com.pms.dependency=sqlserver,kafka"
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  # Site Service
+  site-service:
+    <<: *dotnet-service
+    image: ${SITE_IMAGE:-pms-site-service:latest}
+    ports:
+      - "${SITE_SERVICE_PORT:-5003}:8080"
+    environment:
+      <<: *dotnet-environment
+      Kafka__ClientId: SiteService
+      Kafka__Consumer__GroupId: SiteServiceGroup
+      ConnectionStrings__DefaultConnection: ${SITE_DB_CONNECTION:-Server=sqlserver;Database=PMS_Site;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;MultipleActiveResultSets=True;}
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      labels:
+        - "com.pms.deployment.phase=application"
+        - "com.pms.dependency=sqlserver,kafka"
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+networks:
+  pms-network:
+    driver: overlay
+    name: pms-network
+
+volumes:
+  zookeeper_data:
+    name: pms_zookeeper_data
+  zookeeper_log:
+    name: pms_zookeeper_log
+  kafka_data:
+    name: pms_kafka_data
+  new_sql_data:
+    name: pms_new_sql_data
+
