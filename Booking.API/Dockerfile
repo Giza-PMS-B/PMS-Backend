@@ -43,12 +43,6 @@ COPY wait-for-dependencies.sh /wait-for-dependencies.sh
 RUN chmod +x /wait-for-dependencies.sh
 # -----------------------------------
 
-# ---------- ADD KAFKA CLI (CRITICAL) ----------
-COPY --from=confluentinc/cp-kafka:7.6.0 \
-     /usr/bin/kafka-broker-api-versions \
-     /usr/bin/
-# --------------------------------------------
-
 RUN addgroup --system --gid 1000 appgroup && \
     adduser --system --uid 1000 --ingroup appgroup --shell /bin/sh appuser && \
     mkdir -p /app/logs && \
