@@ -18,13 +18,15 @@ public class SiteService
     private readonly IUOW _uow;
     private readonly IIntegrationEventProducer _eventProducer;
     private readonly ILogger<SiteService> _logger;
+    private readonly IMessagePublisher _publisher;
 
-    public SiteService(IRepo<Model.Entities.Site> siteRepository, IUOW uow, IIntegrationEventProducer eventProducer, ILogger<SiteService> logger)
+    public SiteService(IRepo<Model.Entities.Site> siteRepository, IUOW uow, IIntegrationEventProducer eventProducer, ILogger<SiteService> logger, IMessagePublisher publisher)
     {
         _siteRepository = siteRepository;
         _uow = uow;
         _eventProducer = eventProducer;
         _logger = logger;
+        _publisher = publisher;
     }
 
     public async Task<List<SiteResponseDTO>> GetAllChildSitesOf(Guid parentId)
@@ -68,7 +70,7 @@ public class SiteService
         var parentSite = CreateParentSite(dto);
         await _siteRepository.AddAsync(parentSite);
 
-        var siteCreatedEvent = new SiteCreatedEvent
+        SiteCreatedEvent @event = new SiteCreatedEvent
         {
             SiteId = parentSite.Id,
             NameEn = parentSite.NameEn,
@@ -77,12 +79,15 @@ public class SiteService
             IsLeaf = parentSite.IsLeaf,
         };
 
-        _eventProducer.Enqueue(siteCreatedEvent);
+        _eventProducer.Enqueue(@event);
+        await _publisher.PublishAsync(@event);
+
         _logger.LogInformation("Enqueued SiteCreatedEvent for site {SiteId}", parentSite.Id);
 
-        await _uow.SaveChangesAsync(1);
+        await _uow.SaveChangesAsync();
 
         _logger.LogInformation("Successfully created parent site {SiteId}", parentSite.Id);
+
         return MapToResponseDTO(parentSite);
 
     }
@@ -111,7 +116,7 @@ public class SiteService
         var leafSite = CreateLeafSite(dto);
         await _siteRepository.AddAsync(leafSite);
 
-        var siteCreatedEvent = new SiteCreatedEvent
+        SiteCreatedEvent @event = new SiteCreatedEvent
         {
             SiteId = leafSite.Id,
             NameEn = leafSite.NameEn,
@@ -123,10 +128,12 @@ public class SiteService
             NumberOfSolts = leafSite.NumberOfSolts,
         };
 
-        _eventProducer.Enqueue(siteCreatedEvent);
+        _eventProducer.Enqueue(@event);
+        await _publisher.PublishAsync(@event);
+
         _logger.LogInformation("Enqueued SiteCreatedEvent for leaf site {SiteId}", leafSite.Id);
 
-        await _uow.SaveChangesAsync(1);
+        await _uow.SaveChangesAsync();
 
         _logger.LogInformation("Successfully created leaf site {SiteId}", leafSite.Id);
 

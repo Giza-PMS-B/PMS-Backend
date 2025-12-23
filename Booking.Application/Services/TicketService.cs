@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using SharedKernel.EventDriven.Abstraction;
 using SharedKernel.Infrastructure.Persistent.Abstraction;
+using SharedKernel.MessageBus.Abstraction;
 
 namespace Booking.Application.Services;
 
@@ -15,14 +16,16 @@ public class TicketService
     private readonly IUOW _uow;
     private readonly ILogger<TicketService> _logger;
     private readonly IIntegrationEventProducer _eventProducer;
+    private readonly IMessagePublisher _publisher;
 
-    public TicketService(IRepo<Ticket> ticketRepository, IRepo<Model.Entities.Site> siteRepository, IUOW uow, ILogger<TicketService> logger, IIntegrationEventProducer eventProducer)
+    public TicketService(IRepo<Ticket> ticketRepository, IRepo<Model.Entities.Site> siteRepository, IUOW uow, ILogger<TicketService> logger, IIntegrationEventProducer eventProducer, IMessagePublisher publisher)
     {
         _ticketRepository = ticketRepository;
         _siteRepository = siteRepository;
         _logger = logger;
         _uow = uow;
         _eventProducer = eventProducer;
+        _publisher = publisher;
     }
     public async Task<Ticket> CreateTicketAsync(CreateTicketDTO createTicketDTO)
 
@@ -47,7 +50,7 @@ public class TicketService
 
         await _ticketRepository.AddAsync(ticket);
 
-        var BookingCreatedEvent = new BookingCreatedEvent
+        BookingCreatedEvent @event = new BookingCreatedEvent
         {
             Id = ticket.Id,
             SiteName = ticket.SiteName,
@@ -57,10 +60,12 @@ public class TicketService
             BookingTo = ticket.BookingTo,
             TotalPrice = ticket.TotalPrice,
         };
-        _eventProducer.Enqueue(BookingCreatedEvent);
+        _eventProducer.Enqueue(@event);
+        await _publisher.PublishAsync(@event);
+
         _logger.LogInformation("Enqueued Booking Created event for Ticket  {TicketId}", ticket.Id);
 
-        await _uow.SaveChangesAsync(2);
+        await _uow.SaveChangesAsync();
 
         return ticket;
     }
