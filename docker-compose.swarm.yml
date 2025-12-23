@@ -1,0 +1,184 @@
+version: "3.9"
+
+# ===============================
+# Shared environment configuration
+# ===============================
+x-dotnet-environment: &dotnet-environment
+  ASPNETCORE_ENVIRONMENT: "${ENVIRONMENT:-Production}"
+  ASPNETCORE_HTTP_PORTS: "8080"
+  Kafka__BootstrapServers: "kafka:9092"
+  Kafka__Producer__Acks: "all"
+  Kafka__Producer__MessageTimeoutMs: "30000"
+  Kafka__Producer__Retries: "10"
+  Kafka__Producer__RetryBackoffMs: "5000"
+  Kafka__Consumer__EnableAutoCommit: "false"
+  Kafka__Consumer__AutoOffsetReset: "earliest"
+
+# ===============================
+# Shared Swarm service config
+# ===============================
+x-dotnet-service: &dotnet-service
+  networks:
+    - pms-network
+  deploy:
+    replicas: 1
+    restart_policy:
+      condition: on-failure
+      delay: 10s
+      max_attempts: 10
+    update_config:
+      order: start-first
+      parallelism: 1
+
+# ===============================
+# Networks
+# ===============================
+networks:
+  pms-network:
+    driver: overlay
+    attachable: true
+
+# ===============================
+# Volumes
+# ===============================
+volumes:
+  zookeeper_data:
+    name: pms_zookeeper_data
+  zookeeper_log:
+    name: pms_zookeeper_log
+  kafka_data:
+    name: pms_kafka_data
+  new_sql_data:
+    name: pms_new_sql_data
+
+# ===============================
+# Services
+# ===============================
+services:
+
+  # -------- Kafka UI
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: "local"
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka:9092"
+      KAFKA_CLUSTERS_0_ZOOKEEPER: "zookeeper:2181"
+    networks:
+      - pms-network
+    deploy:
+      replicas: 1
+
+  # -------- Zookeeper
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: "2181"
+      ZOOKEEPER_TICK_TIME: "2000"
+    ports:
+      - "2181:2181"
+    networks:
+      - pms-network
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
+    deploy:
+      replicas: 1
+
+  # -------- Kafka (SWARM-SAFE)
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: "1"
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+
+      KAFKA_LISTENERS: |
+        INTERNAL://0.0.0.0:9092,
+        EXTERNAL://0.0.0.0:29092
+
+      KAFKA_ADVERTISED_LISTENERS: |
+        INTERNAL://kafka:9092,
+        EXTERNAL://localhost:29092
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: |
+        INTERNAL:PLAINTEXT,
+        EXTERNAL:PLAINTEXT
+
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+
+    networks:
+      - pms-network
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    deploy:
+      replicas: 1
+
+  # -------- SQL Server (COMMENTED ON PURPOSE)
+#  sqlserver:
+#    image: mcr.microsoft.com/mssql/server:2022-latest
+#    ports:
+#      - "1433:1433"
+#    environment:
+#      ACCEPT_EULA: "Y"
+#      MSSQL_SA_PASSWORD: "${SA_PASSWORD}"
+#      MSSQL_PID: "Developer"
+#    networks:
+#      - pms-network
+#    volumes:
+#      - new_sql_data:/var/opt/mssql
+#    deploy:
+#      replicas: 1
+
+  # -------- Booking API
+  booking-service:
+    <<: *dotnet-service
+    image: wagihh/pms-booking-service:${IMAGE_TAG}
+    ports:
+      - "5001:8080"
+    environment:
+      <<: *dotnet-environment
+      Kafka__ClientId: "BookingService"
+      Kafka__Consumer__GroupId: "BookingServiceGroup"
+      ConnectionStrings__DefaultConnection: >
+        Server=sqlserver;Database=PMS_Booking;
+        User Id=sa;Password=${SA_PASSWORD};
+        TrustServerCertificate=True;
+        MultipleActiveResultSets=True
+
+  # -------- Invoice API
+  invoice-service:
+    <<: *dotnet-service
+    image: wagihh/pms-invoice-service:${IMAGE_TAG}
+    ports:
+      - "5002:8080"
+    environment:
+      <<: *dotnet-environment
+      Kafka__ClientId: "InvoiceService"
+      Kafka__Consumer__GroupId: "InvoiceServiceGroup"
+      ConnectionStrings__DefaultConnection: >
+        Server=sqlserver;Database=PMS_Invoice;
+        User Id=sa;Password=${SA_PASSWORD};
+        TrustServerCertificate=True;
+        MultipleActiveResultSets=True
+
+  # -------- Site API
+  site-service:
+    <<: *dotnet-service
+    image: wagihh/pms-site-service:${IMAGE_TAG}
+    ports:
+      - "5003:8080"
+    environment:
+      <<: *dotnet-environment
+      Kafka__ClientId: "SiteService"
+      Kafka__Consumer__GroupId: "SiteServiceGroup"
+      ConnectionStrings__DefaultConnection: >
+        Server=sqlserver;Database=PMS_Site;
+        User Id=sa;Password=${SA_PASSWORD};
+        TrustServerCertificate=True;
+        MultipleActiveResultSets=True
