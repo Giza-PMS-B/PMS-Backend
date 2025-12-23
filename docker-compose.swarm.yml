@@ -24,8 +24,8 @@ x-dotnet-service: &dotnet-service
     replicas: 1
     restart_policy:
       condition: on-failure
-      delay: 10s
-      max_attempts: 10
+      delay: 15s
+      max_attempts: 20
     update_config:
       order: start-first
       parallelism: 1
@@ -118,6 +118,30 @@ services:
       - kafka_data:/var/lib/kafka/data
     deploy:
       replicas: 1
+
+  # -------- Kafka Topic Initializer (ONE-SHOT)
+  kafka-init:
+    image: confluentinc/cp-kafka:7.6.0
+    networks:
+      - pms-network
+    command: >
+      bash -c "
+        echo 'Waiting for Kafka...';
+        cub kafka-ready -b kafka:9092 1 60 &&
+        kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists
+          --topic site-created
+          --partitions 1
+          --replication-factor 1 &&
+        kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists
+          --topic invoice-created
+          --partitions 1
+          --replication-factor 1 &&
+        echo 'Kafka topics created successfully'
+      "
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: none
 
   # -------- SQL Server (COMMENTED ON PURPOSE)
 #  sqlserver:
