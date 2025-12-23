@@ -80,7 +80,7 @@ pipeline {
 
                     NOT_READY=$(docker stack services ${STACK_NAME} \
                       --format '{{.Name}} {{.Replicas}}' \
-                      | grep -E 'kafka|zookeeper|sqlserver' \
+                      | grep -E 'pms-backend_kafka$|zookeeper|sqlserver' \
                       | grep '0/' || true)
 
                     if [ -z "$NOT_READY" ]; then
