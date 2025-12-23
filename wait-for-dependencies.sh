@@ -1,14 +1,18 @@
-#!/bin/sh
+#!/usr/bin/env bash
 set -e
 
 echo "Waiting for Kafka (TCP check)..."
 
-until sh -c "</dev/tcp/kafka/9092" 2>/dev/null; do
+until (echo > /dev/tcp/kafka/9092) >/dev/null 2>&1; do
   echo "Kafka not ready yet..."
   sleep 5
 done
 
 echo "Kafka TCP port is reachable."
+echo "Starting application..."
+
+exec "$@"
+
 # ----------------------------------------
 # SQL Server wait (COMMENTED FOR NOW)
 # ----------------------------------------
@@ -20,5 +24,3 @@ echo "Kafka TCP port is reachable."
 # echo "SQL Server is reachable."
 # ----------------------------------------
 
-echo "Starting application..."
-exec "$@"
