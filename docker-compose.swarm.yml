@@ -28,6 +28,7 @@ x-dotnet-service: &dotnet-service
       max_attempts: 20
     update_config:
       order: start-first
+      delay: 10s
       parallelism: 1
 
 # ===============================
@@ -119,7 +120,7 @@ services:
     deploy:
       replicas: 1
 
-  # -------- Kafka Topic Initializer (ONE-SHOT)
+  # -------- Kafka Topic Initializer (STABILIZED)
   kafka-init:
     image: confluentinc/cp-kafka:7.6.0
     networks:
@@ -136,7 +137,8 @@ services:
           --topic invoice-created
           --partitions 1
           --replication-factor 1 &&
-        echo 'Kafka topics created successfully'
+        echo 'Kafka topics created successfully';
+        sleep 10
       "
     deploy:
       replicas: 1
