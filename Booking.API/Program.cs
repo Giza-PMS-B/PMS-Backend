@@ -15,7 +15,7 @@ using SharedKernel.Infrastructure.Persistent.Abstraction;
 using SharedKernel.MessageBus.Abstraction;
 using SharedKernel.MessageBus.Kafka;
 using SharedKernel.Logging;
-using Site.Model.Shared.Events;
+using Site.Shared.Events;
 using Serilog;
 
 namespace Booking.API;

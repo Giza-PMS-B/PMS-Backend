@@ -3,7 +3,7 @@ using Booking.Model.Entities;
 using Microsoft.Extensions.Logging;
 using SharedKernel.Infrastructure.Persistent.Abstraction;
 using SharedKernel.MessageBus.Abstraction;
-using Site.Model.Shared.Events;
+using Site.Shared.Events;
 
 namespace Booking.Application.EventHandlers;
 
@@ -25,10 +25,6 @@ public class SiteCreatedEventHandler : IMessageHandler<SiteCreatedEvent>
 
     public async Task HandleAsync(SiteCreatedEvent message, CancellationToken ct)
     {
-        // // Check if site already exists (idempotency)
-        // var existingSite = _siteRepository.GetAll().Where(s => s.Id == message.SiteId).FirstOrDefault();
-        // if (existingSite != null) return;
-
         // Create site in Booking service's database
         _logger.LogInformation("Message come with name in arabic =  {Name}", message.NameAr);
 

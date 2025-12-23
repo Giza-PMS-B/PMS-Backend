@@ -13,7 +13,6 @@ using Site.Application.FluentValidation;
 using Site.Application.Services;
 using Site.Infrastrcure.Persistent;
 using Serilog;
-using Site.Model.Shared.Events;
 
 namespace Site.API;
 

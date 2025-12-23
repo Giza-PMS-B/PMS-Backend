@@ -1,7 +1,7 @@
 using System;
 using SharedKernel.MessageBus.Abstraction;
 
-namespace SharedKernel.EventDriven.Abstraction;
+namespace Booking.Events.Shared;
 
 public record BookingCreatedEvent : IntegrationEvent
 {
