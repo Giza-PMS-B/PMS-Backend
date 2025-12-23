@@ -2,7 +2,6 @@ pipeline {
 
     agent any
 
-
     environment {
 
         // =========================
@@ -53,6 +52,57 @@ pipeline {
         }
 
         // =========================
+        // Deploy INFRA Stack
+        // =========================
+        stage('Deploy Infrastructure') {
+            steps {
+                sh '''
+                  echo "Deploying infrastructure stack..."
+                  docker stack deploy \
+                    -c docker-compose.infra.yml \
+                    ${STACK_NAME}
+                '''
+            }
+        }
+
+        // =========================
+        // Wait for INFRA (Kafka-safe)
+        // =========================
+        stage('Wait for Infrastructure Readiness') {
+            steps {
+                sh '''
+                  echo "Waiting for infrastructure to become healthy..."
+                  MAX_WAIT=600   # 10 minutes
+                  INTERVAL=20
+                  ELAPSED=0
+
+                  while [ $ELAPSED -lt $MAX_WAIT ]; do
+
+                    NOT_READY=$(docker stack services ${STACK_NAME} \
+                      --format '{{.Name}} {{.Replicas}}' \
+                      | grep -E 'kafka|zookeeper|sqlserver' \
+                      | grep '0/' || true)
+
+                    if [ -z "$NOT_READY" ]; then
+                      echo "All infra services are running"
+                      break
+                    fi
+
+                    echo "Infra not ready yet..."
+                    echo "$NOT_READY"
+                    sleep $INTERVAL
+                    ELAPSED=$((ELAPSED + INTERVAL))
+                  done
+
+                  if [ $ELAPSED -ge $MAX_WAIT ]; then
+                    echo "Infrastructure failed to become ready in time"
+                    exit 1
+                  fi
+                '''
+            }
+        }
+
+        // =========================
         // Docker Login
         // =========================
         stage('Docker Login') {
@@ -81,13 +131,8 @@ pipeline {
                   docker build -t ${INVOICE_IMAGE}:${IMAGE_TAG} -f Invoice.API/Dockerfile .
                   docker build -t ${SITE_IMAGE}:${IMAGE_TAG} -f Site.API/Dockerfile .
 
-                  docker rmi ${BOOKING_IMAGE}:latest || true
                   docker tag ${BOOKING_IMAGE}:${IMAGE_TAG} ${BOOKING_IMAGE}:latest
-
-                  docker rmi ${INVOICE_IMAGE}:latest || true
                   docker tag ${INVOICE_IMAGE}:${IMAGE_TAG} ${INVOICE_IMAGE}:latest
-
-                  docker rmi ${SITE_IMAGE}:latest || true
                   docker tag ${SITE_IMAGE}:${IMAGE_TAG} ${SITE_IMAGE}:latest
                 """
             }
@@ -112,35 +157,39 @@ pipeline {
         }
 
         // =========================
-        // Deploy Swarm Stack
+        // Deploy APPLICATION Stack
         // =========================
-        stage('Deploy Backend Stack') {
+        stage('Deploy Backend Services') {
             steps {
                 sh """
                   export IMAGE_TAG=${IMAGE_TAG}
-                  docker stack deploy -c docker-compose.swarm.yml ${STACK_NAME}
+                  docker stack deploy \
+                    -c docker-compose.swarm.yml \
+                    ${STACK_NAME}
                 """
             }
         }
 
         // =========================
-        // Swarm Health Check
+        // App Health Check
         // =========================
-        stage('Health Check') {
+        stage('Application Health Check') {
             steps {
                 sh '''
-                  echo "Waiting for services to stabilize..."
+                  echo "Waiting for application services..."
                   sleep 40
 
                   FAILED=$(docker stack services ${STACK_NAME} \
-                    --format '{{.Name}} {{.Replicas}}' | grep "0/" || true)
+                    --format '{{.Name}} {{.Replicas}}' \
+                    | grep -E 'booking|invoice|site' \
+                    | grep "0/" || true)
 
                   if [ -n "$FAILED" ]; then
-                    echo "Some services are not running:"
+                    echo "Some application services failed:"
                     echo "$FAILED"
                     exit 1
                   else
-                    echo "All services are running"
+                    echo "All application services are running"
                   fi
                 '''
             }
@@ -150,9 +199,7 @@ pipeline {
     post {
 
         always {
-            sh '''
-              docker logout || true
-            '''
+            sh 'docker logout || true'
         }
 
         success {
@@ -164,3 +211,4 @@ pipeline {
         }
     }
 }
+
