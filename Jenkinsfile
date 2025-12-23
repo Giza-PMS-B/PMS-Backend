@@ -49,23 +49,23 @@ pipeline {
         }
 
         // =========================
-        // Docker Login
+        // Docker Login - SKIPPED FOR NOW (not needed if not pushing images)
         // =========================
-        stage('Docker Login') {
-            steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'Docker-PAT',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )
-                ]) {
-                    sh '''
-                      echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                    '''
-                }
-            }
-        }
+        // stage('Docker Login') {
+        //     steps {
+        //         withCredentials([
+        //             usernamePassword(
+        //                 credentialsId: 'Docker-PAT',
+        //                 usernameVariable: 'DOCKER_USER',
+        //                 passwordVariable: 'DOCKER_PASS'
+        //             )
+        //         ]) {
+        //             sh '''
+        //               echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+        //             '''
+        //         }
+        //     }
+        // }
 
         // =========================
         // Build Backend Images
@@ -90,22 +90,22 @@ pipeline {
         }
 
         // =========================
-        // Push Backend Images
+        // Push Backend Images - SKIPPED FOR NOW (uncomment when ready)
         // =========================
-        stage('Push Backend Images') {
-            steps {
-                sh """
-                  docker push ${BOOKING_IMAGE}:${IMAGE_TAG}
-                  docker push ${BOOKING_IMAGE}:latest
-
-                  docker push ${INVOICE_IMAGE}:${IMAGE_TAG}
-                  docker push ${INVOICE_IMAGE}:latest
-
-                  docker push ${SITE_IMAGE}:${IMAGE_TAG}
-                  docker push ${SITE_IMAGE}:latest
-                """
-            }
-        }
+        // stage('Push Backend Images') {
+        //     steps {
+        //         sh """
+        //           docker push ${BOOKING_IMAGE}:${IMAGE_TAG}
+        //           docker push ${BOOKING_IMAGE}:latest
+        //
+        //           docker push ${INVOICE_IMAGE}:${IMAGE_TAG}
+        //           docker push ${INVOICE_IMAGE}:latest
+        //
+        //           docker push ${SITE_IMAGE}:${IMAGE_TAG}
+        //           docker push ${SITE_IMAGE}:latest
+        //         """
+        //     }
+        // }
 
         // =========================
         // Deploy Swarm Stack
@@ -146,7 +146,7 @@ pipeline {
     post {
         always {
             sh '''
-              docker logout || true
+              # docker logout || true  # Not needed if not logging in
             '''
         }
 

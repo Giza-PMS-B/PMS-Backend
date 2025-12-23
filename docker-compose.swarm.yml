@@ -12,8 +12,8 @@ x-dotnet-environment: &dotnet-environment
   ASPNETCORE_HTTP_PORTS: 8080
   Kafka__BootstrapServers: kafka:9092
   Kafka__Producer__Acks: all
-  Kafka__Producer__MessageTimeoutMs: 30000
-  Kafka__Consumer__EnableAutoCommit: false
+  Kafka__Producer__MessageTimeoutMs: "30000"
+  Kafka__Consumer__EnableAutoCommit: "false"
   Kafka__Consumer__AutoOffsetReset: earliest
 
 # Shared service deployment configuration
@@ -258,6 +258,7 @@ services:
 networks:
   pms-network:
     external: true
+    name: pms-network
 
 volumes:
   zookeeper_data:
