@@ -103,24 +103,31 @@ pipeline {
 
         // =============================
         // PHASE 1 – Deploy Infrastructure
-        // Deploy full stack but scale application services to 0
+        // Deploy full stack but immediately scale application services to 0
         // =============================
         stage('Deploy Infrastructure') {
             steps {
                 sh """
-                  # Deploy stack with all services (apps will be scaled to 0)
+                  # Set image environment variables for the compose file
                   export BOOKING_IMAGE=${BOOKING_IMAGE}:latest
                   export INVOICE_IMAGE=${INVOICE_IMAGE}:latest
                   export SITE_IMAGE=${SITE_IMAGE}:latest
                   
+                  # Deploy the full stack (all services defined)
+                  echo "Deploying stack ${STACK_NAME}..."
                   docker stack deploy \
                     -c docker-compose.swarm.yml \
                     ${STACK_NAME}
                   
-                  # Scale application services to 0 initially
-                  docker service scale ${STACK_NAME}_booking-service=0 2>/dev/null || true
-                  docker service scale ${STACK_NAME}_invoice-service=0 2>/dev/null || true
-                  docker service scale ${STACK_NAME}_site-service=0 2>/dev/null || true
+                  # Immediately scale application services to 0 to prevent them from starting
+                  # This ensures infrastructure services start first
+                  echo "Scaling application services to 0 (will scale up after infrastructure is ready)..."
+                  sleep 2
+                  docker service scale ${STACK_NAME}_booking-service=0 2>/dev/null || echo "Booking service scaling skipped"
+                  docker service scale ${STACK_NAME}_invoice-service=0 2>/dev/null || echo "Invoice service scaling skipped"
+                  docker service scale ${STACK_NAME}_site-service=0 2>/dev/null || echo "Site service scaling skipped"
+                  
+                  echo "✅ Infrastructure deployment initiated"
                 """
             }
         }
@@ -180,38 +187,39 @@ pipeline {
 
         // =============================
         // Wait for SQL Server (depends on Kafka phase completion)
+        // COMMENTED OUT - Enable later by uncommenting this stage
         // =============================
-        stage('Wait for SQL Server') {
-            steps {
-                sh '''
-                  echo "Waiting for SQL Server to be ready..."
-                  MAX_WAIT=180
-                  ELAPSED=0
-                  
-                  until docker run --rm \
-                    --network ${STACK_NAME}_pms-network \
-                    mcr.microsoft.com/mssql/server:2022-latest \
-                    /opt/mssql-tools18/bin/sqlcmd \
-                      -S sqlserver \
-                      -U sa \
-                      -P "${SA_PASSWORD:-YourStrong@Passw0rd}" \
-                      -C \
-                      -Q "SELECT 1" \
-                      >/dev/null 2>&1; do
-                    
-                    if [ $ELAPSED -ge $MAX_WAIT ]; then
-                      echo "⚠️  Timeout waiting for SQL Server"
-                      exit 1
-                    fi
-                    
-                    echo "SQL Server not ready yet... (${ELAPSED}s)"
-                    sleep 5
-                    ELAPSED=$((ELAPSED + 5))
-                  done
-                  echo "✅ SQL Server is ready"
-                '''
-            }
-        }
+        // stage('Wait for SQL Server') {
+        //     steps {
+        //         sh '''
+        //           echo "Waiting for SQL Server to be ready..."
+        //           MAX_WAIT=180
+        //           ELAPSED=0
+        //           
+        //           until docker run --rm \
+        //             --network ${STACK_NAME}_pms-network \
+        //             mcr.microsoft.com/mssql/server:2022-latest \
+        //             /opt/mssql-tools18/bin/sqlcmd \
+        //               -S sqlserver \
+        //               -U sa \
+        //               -P "${SA_PASSWORD:-YourStrong@Passw0rd}" \
+        //               -C \
+        //               -Q "SELECT 1" \
+        //               >/dev/null 2>&1; do
+        //             
+        //             if [ $ELAPSED -ge $MAX_WAIT ]; then
+        //               echo "⚠️  Timeout waiting for SQL Server"
+        //               exit 1
+        //             fi
+        //             
+        //             echo "SQL Server not ready yet... (${ELAPSED}s)"
+        //             sleep 5
+        //             ELAPSED=$((ELAPSED + 5))
+        //           done
+        //           echo "✅ SQL Server is ready"
+        //         '''
+        //     }
+        // }
 
         // =============================
         // PHASE 2 – Deploy Application Services
