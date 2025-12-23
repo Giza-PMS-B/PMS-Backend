@@ -8,7 +8,7 @@ using SharedKernel.Infrastructure.Persistent.Abstraction;
 using SharedKernel.MessageBus.Abstraction;
 using Site.Application.DTO;
 using Site.Model.Entities;
-using Site.Shared.Events;
+using Site.Model.Shared;
 
 namespace Site.Application.Services;
 

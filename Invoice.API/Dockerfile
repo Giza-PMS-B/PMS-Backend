@@ -23,7 +23,7 @@ COPY ["SharedKernel.MessageBus.Kafka/SharedKernel.MessageBus.Kafka.csproj", "Sha
 COPY ["SharedKernel.Models.Enum/SharedKernel.Models.Enum.csproj", "SharedKernel.Models.Enum/"]
 COPY ["SharedKernel.Persistent/SharedKernel.Persistent.csproj", "SharedKernel.Persistent/"]
 COPY ["SharedKernel.Logging/SharedKernel.Logging.csproj", "SharedKernel.Logging/"]
-COPY ["code/Services/Booking/Booking.Events.Shared/Booking.Events.Shared.csproj", "code/Services/Booking/Booking.Events.Shared/"]
+COPY ["Booking.Model.Shared/Booking.Model.Shared.csproj", "Booking.Model.Shared/"]
 
 RUN dotnet restore "Invoice.API/Invoice.API.csproj"
 COPY . .

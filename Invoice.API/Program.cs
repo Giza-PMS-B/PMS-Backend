@@ -15,7 +15,7 @@ using SharedKernel.MessageBus.Kafka;
 using SharedKernel.Logging;
 using Serilog;
 using Invoice.Application.EventHandlers;
-using Booking.Events.Shared;
+using Booking.Model.Shared;
 
 namespace Invoice.API;
 

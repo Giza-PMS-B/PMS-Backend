@@ -3,7 +3,7 @@ using Booking.Model.Entities;
 using Microsoft.Extensions.Logging;
 using SharedKernel.Infrastructure.Persistent.Abstraction;
 using SharedKernel.MessageBus.Abstraction;
-using Site.Shared.Events;
+using Site.Model.Shared;
 
 namespace Booking.Application.EventHandlers;
 

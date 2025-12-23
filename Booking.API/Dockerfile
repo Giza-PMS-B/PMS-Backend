@@ -13,7 +13,6 @@ COPY ["Booking.Application/Booking.Application.csproj", "Booking.Application/"]
 COPY ["Booking.Infrastrcure.Persistent/Booking.Infrastrcure.Persistent.csproj", "Booking.Infrastrcure.Persistent/"]
 COPY ["Booking.Model.Shared/Booking.Model.Shared.csproj", "Booking.Model.Shared/"]
 COPY ["code/Services/Booking/Booking.Model/Booking.Model.csproj", "code/Services/Booking/Booking.Model/"]
-COPY ["code/Services/Booking/Booking.Events.Shared/Booking.Events.Shared.csproj", "code/Services/Booking/Booking.Events.Shared/"]
 COPY ["SharedKernel.EventDriven/SharedKernel.EventDriven.csproj", "SharedKernel.EventDriven/"]
 COPY ["SharedKernel.EventDriven.Abstraction/SharedKernel.EventDriven.Abstraction.csproj", "SharedKernel.EventDriven.Abstraction/"]
 COPY ["SharedKernel.Infrastrucrure.Abstraction/SharedKernel.Infrastrucrure.Abstraction.csproj", "SharedKernel.Infrastrucrure.Abstraction/"]
@@ -24,7 +23,7 @@ COPY ["SharedKernel.MessageBus.Kafka/SharedKernel.MessageBus.Kafka.csproj", "Sha
 COPY ["SharedKernel.Models.Enum/SharedKernel.Models.Enum.csproj", "SharedKernel.Models.Enum/"]
 COPY ["SharedKernel.Persistent/SharedKernel.Persistent.csproj", "SharedKernel.Persistent/"]
 COPY ["SharedKernel.Logging/SharedKernel.Logging.csproj", "SharedKernel.Logging/"]
-COPY ["code/Services/Site/Site.Events.Shared/Site.Events.Shared.csproj", "code/Services/Site/Site.Events.Shared/"]
+COPY ["Site.Model.Shared/Site.Model.Shared.csproj", "Site.Model.Shared/"]
 
 
 RUN dotnet restore "Booking.API/Booking.API.csproj"

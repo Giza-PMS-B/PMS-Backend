@@ -6,4 +6,8 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="../SharedKernel.MessageBus.Abstraction/SharedKernel.MessageBus.Abstraction.csproj" />
+    </ItemGroup>
+
 </Project>

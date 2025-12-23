@@ -7,11 +7,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="../code/Services/Booking/Booking.Events.Shared/Booking.Events.Shared.csproj" />
+      <ProjectReference Include="../Booking.Model.Shared/Booking.Model.Shared.csproj" />
       <ProjectReference Include="../code/Services/Booking/Booking.Model/Booking.Model.csproj" />
-      <ProjectReference Include="../code/Services/Site/Site.Events.Shared/Site.Events.Shared.csproj" />
       <ProjectReference Include="../SharedKernel.EventDriven.Abstraction/SharedKernel.EventDriven.Abstraction.csproj" />
       <ProjectReference Include="../SharedKernel.Infratsrucrure.Persistent/SharedKernel.Infratsrucrure.Persistent.csproj" />
+      <ProjectReference Include="../Site.Model.Shared/Site.Model.Shared.csproj" />
     </ItemGroup>
 
     <ItemGroup>
