@@ -1,13 +1,14 @@
 #!/bin/sh
 set -e
 
-echo "Waiting for Kafka..."
-until curl -s kafka:9092 >/dev/null 2>&1; do
+echo "Waiting for Kafka (TCP check)..."
+
+until sh -c "</dev/tcp/kafka/9092" 2>/dev/null; do
   echo "Kafka not ready yet..."
   sleep 5
 done
-echo "Kafka is reachable."
 
+echo "Kafka TCP port is reachable."
 # ----------------------------------------
 # SQL Server wait (COMMENTED FOR NOW)
 # ----------------------------------------
