@@ -26,20 +26,6 @@ volumes:
 # ===============================
 services:
 
-  # -------- Kafka UI
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    ports:
-      - "8090:8080"
-    environment:
-      KAFKA_CLUSTERS_0_NAME: "local"
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka:9092"
-      KAFKA_CLUSTERS_0_ZOOKEEPER: "zookeeper:2181"
-    networks:
-      - pms-network
-    deploy:
-      replicas: 1
-
   # -------- Zookeeper
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
@@ -99,20 +85,30 @@ services:
         echo 'Waiting for Kafka...';
         cub kafka-ready -b kafka:9092 1 60 &&
         kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists
-          --topic site-created
-          --partitions 1
-          --replication-factor 1 &&
+          --topic site-created --partitions 1 --replication-factor 1 &&
         kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists
-          --topic invoice-created
-          --partitions 1
-          --replication-factor 1 &&
-        echo 'Kafka topics created successfully';
+          --topic invoice-created --partitions 1 --replication-factor 1 &&
+        echo 'Kafka topics ready';
         sleep 10
       "
     deploy:
       replicas: 1
       restart_policy:
         condition: none
+
+  # -------- Kafka UI
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - pms-network
+    deploy:
+      replicas: 1
 
   # -------- SQL Server
   sqlserver:
