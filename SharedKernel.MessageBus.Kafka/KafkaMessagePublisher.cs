@@ -42,37 +42,26 @@ namespace SharedKernel.MessageBus.Kafka
         }
 
         public async Task PublishAsync<TEvent>(
-            TEvent message, int topicNum = 0,
-            CancellationToken cancellationToken = default)
+            TEvent message, CancellationToken cancellationToken = default)
             where TEvent : IntegrationEvent
         {
 
-            var topicType = GetTopicType(topicNum);
-            var topic = _resolver.Resolve(topicType);
-            _logger.LogInformation("Successfully created Topic Name {topic}", topic);
+            var topic = _resolver.Resolve<TEvent>();
+
             var kafkaMessage = new Message<string, byte[]>
             {
                 Key = message.EventId.ToString(),
                 Value = _serializer.Serialize(message),
                 Headers = new Headers
-            {
-                { MessageHeaders.CorrelationId, System.Text.Encoding.UTF8.GetBytes(message.EventId.ToString()) }
-            }
+                {
+                    {
+                        MessageHeaders.CorrelationId, System.Text.Encoding.UTF8.GetBytes(message.EventId.ToString())
+                    }
+                }
             };
-            _logger.LogInformation("Meeage value =  {val}", kafkaMessage.Value);
+
             await _producer.ProduceAsync(topic, kafkaMessage, cancellationToken);
         }
-
         public void Dispose() => _producer.Dispose();
-
-        private Type GetTopicType(int topicNum)
-        {
-            return topicNum switch
-            {
-                1 => typeof(SiteCreatedEvent),
-                2 => typeof(BookingCreatedEvent),
-                _ => throw new ArgumentException($"Unknown topic number: {topicNum}")
-            };
-        }
     }
 }

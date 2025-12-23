@@ -70,15 +70,10 @@ public class Program
         builder.Services.AddScoped<SiteService>();
 
 
-
-        // Enable event infrastructure
-        builder.Services.AddScoped<IIntegrationEventProducer, IntegrationEventQueue>();
-        builder.Services.AddScoped<IIntegrationEventQueue, IntegrationEventQueue>();
         builder.Services.AddSingleton<ConcurrentQueue<IntegrationEvent>>();
 
-        builder.Services.AddSingleton<IMessagePublisher, KafkaMessagePublisher>();
-        builder.Services.AddSingleton<IMessageNameResolver, DefaultMessageNameResolver>();
-        builder.Services.AddSingleton<IMessageSerializer, JsonMessageSerializer>();
+        builder.Services.AddScoped<IIntegrationEventProducer, IntegrationEventQueue>();
+        builder.Services.AddScoped<IIntegrationEventQueue, IntegrationEventQueue>();
 
         // Configure Kafka with consumer
         builder.Services.AddKafkaBroker(options =>
@@ -99,18 +94,10 @@ public class Program
         })
         .AddKafkaConsumer<SiteCreatedEvent, SiteCreatedEventHandler>();
 
-        // Register the handler
-        builder.Services.AddScoped<IMessageHandler<SiteCreatedEvent>, SiteCreatedEventHandler>();
 
-        // Register the handler
-
-        // Update UOW registration
-        builder.Services.AddScoped<IUOW>(provider => new UOW(
-            provider.GetRequiredService<DbContext>(),
-            provider.GetRequiredService<IMessagePublisher>(),
-            provider.GetRequiredService<IIntegrationEventQueue>(),
-            provider.GetRequiredService<ILogger<UOW>>()
-        ));
+        builder.Services.AddSingleton<IMessagePublisher, KafkaMessagePublisher>();
+        builder.Services.AddSingleton<IMessageNameResolver, DefaultMessageNameResolver>();
+        builder.Services.AddSingleton<IMessageSerializer, JsonMessageSerializer>();
 
 
         var app = builder.Build();

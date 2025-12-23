@@ -27,7 +27,7 @@ namespace SharedKernel.Infrastructure.Persistent
             _logger = logger;
         }
 
-        public async Task SaveChangesAsync(int topicNumber = 0)
+        public async Task SaveChangesAsync()
         {
             _logger?.LogDebug("Starting SaveChangesAsync");
 
@@ -39,7 +39,7 @@ namespace SharedKernel.Infrastructure.Persistent
 
             foreach (var integrationEvent in events)
             {
-                await _messagePublisher.PublishAsync(integrationEvent, topicNumber);
+                await _messagePublisher.PublishAsync(integrationEvent);
             }
 
             _messageQueue.Reset();

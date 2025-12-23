@@ -66,26 +66,10 @@ public class Program
         builder.Services.AddScoped<TicketService>();
         builder.Services.AddScoped<InvoiceService>();
 
-        //very importatant to uncomment that when dealing with events
-        // Enable event infrastructure
-        // builder.Services.AddScoped<IntegrationEventQueue>();
-        // builder.Services.AddScoped<IIntegrationEventProducer>(provider => provider.GetRequiredService<IntegrationEventQueue>());
-        // builder.Services.AddScoped<IIntegrationEventQueue>(provider => provider.GetRequiredService<IntegrationEventQueue>());
-        // builder.Services.AddSingleton<ConcurrentQueue<IntegrationEvent>>();
-
-        // builder.Services.AddSingleton<IMessagePublisher, KafkaMessagePublisher>();
-        // builder.Services.AddSingleton<IMessageNameResolver, DefaultMessageNameResolver>();
-        // builder.Services.AddSingleton<IMessageSerializer, JsonMessageSerializer>();
-
-        // Enable event infrastructure
+        builder.Services.AddSingleton<ConcurrentQueue<IntegrationEvent>>();
+        // very importatant to uncomment that when dealing with events
         builder.Services.AddScoped<IIntegrationEventProducer, IntegrationEventQueue>();
         builder.Services.AddScoped<IIntegrationEventQueue, IntegrationEventQueue>();
-        builder.Services.AddSingleton<ConcurrentQueue<IntegrationEvent>>();
-
-        builder.Services.AddSingleton<IMessagePublisher, KafkaMessagePublisher>();
-        builder.Services.AddSingleton<IMessageNameResolver, DefaultMessageNameResolver>();
-        builder.Services.AddSingleton<IMessageSerializer, JsonMessageSerializer>();
-
 
         builder.Services.AddKafkaBroker(options =>
         {
@@ -103,15 +87,6 @@ public class Program
                 AutoOffsetReset = Confluent.Kafka.AutoOffsetReset.Earliest
             };
         }).AddKafkaConsumer<BookingCreatedEvent, BookingCreatedEventHandler>();
-
-
-        // Update UOW registration
-        builder.Services.AddScoped<IUOW>(provider => new UOW(
-            provider.GetRequiredService<DbContext>(),
-            provider.GetRequiredService<IMessagePublisher>(),
-            provider.GetRequiredService<IIntegrationEventQueue>(),
-            provider.GetRequiredService<ILogger<UOW>>()
-        ));
 
 
         var app = builder.Build();
