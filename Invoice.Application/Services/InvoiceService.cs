@@ -29,8 +29,8 @@ public class InvoiceService
         {
             Id = Guid.NewGuid(),
             HtmlDocumentPath = createInvoiceDTO.HtmlDocumentPath,
-            TaxAmount = createInvoiceDTO.TaxAmount,
-            TotalAmountBeforeTax = createInvoiceDTO.TotalAmountBeforeTax,
+            TaxAmount = 10,
+            TotalAmountBeforeTax = CalcAmountBeforeTax(createInvoiceDTO.TotalAmountAfterTax, 10),
             TotalAmountAfterTax = createInvoiceDTO.TotalAmountAfterTax,
             TicketSerialNumber = createInvoiceDTO.TicketSerialNumber,
             TicketId = createInvoiceDTO.TicketId
@@ -40,6 +40,10 @@ public class InvoiceService
         await _uow.SaveChangesAsync();
 
         return invoice;
+    }
+    private decimal CalcAmountBeforeTax(decimal totalPrice, decimal Amount)
+    {
+        return (10 / 100) * totalPrice + totalPrice;
     }
 
     private async Task ValidateTicketExistsAsync(Guid ticketId)
