@@ -4,21 +4,21 @@ pipeline {
 
     environment {
 
-        // =========================
+        // =============================
         // MODE SWITCH
-        // =========================
-        // false = local testing (NO docker push)
-        // true  = production (WITH docker push)
+        // =============================
+        // false = local testing (no push)
+        // true  = production (push enabled)
         PUSH_IMAGES = "false"
 
-        // =========================
+        // =============================
         // Swarm
-        // =========================
+        // =============================
         STACK_NAME = "pms-backend"
 
-        // =========================
+        // =============================
         // Docker Hub
-        // =========================
+        // =============================
         DOCKER_REPO = "wagihh"
 
         BOOKING_IMAGE = "${DOCKER_REPO}/pms-booking-service"
@@ -30,9 +30,6 @@ pipeline {
 
     stages {
 
-        // =========================
-        // Checkout
-        // =========================
         stage('Checkout Backend Repo') {
             steps {
                 git(
@@ -43,24 +40,17 @@ pipeline {
             }
         }
 
-        // =========================
-        // Verify Docker Swarm
-        // =========================
         stage('Verify Docker Swarm') {
             steps {
                 sh '''
-                  STATE=$(docker info --format '{{.Swarm.LocalNodeState}}')
-                  if [ "$STATE" != "active" ]; then
-                    echo "Docker Swarm is not active"
-                    exit 1
-                  fi
+                  [ "$(docker info --format '{{.Swarm.LocalNodeState}}')" = "active" ]
                 '''
             }
         }
 
-        // =========================
-        // Docker Login (only if pushing)
-        // =========================
+        // =============================
+        // Docker Login (ONLY if pushing)
+        // =============================
         stage('Docker Login') {
             when {
                 expression { env.PUSH_IMAGES == "true" }
@@ -73,101 +63,100 @@ pipeline {
                         passwordVariable: 'DOCKER_PASS'
                     )
                 ]) {
-                    sh '''
-                      echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                    '''
+                    sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
                 }
             }
         }
 
-        // =========================
-        // Build Backend Images
-        // =========================
-        stage('Build Backend Images') {
+        stage('Build Images') {
             steps {
                 sh """
                   docker build -t ${BOOKING_IMAGE}:${IMAGE_TAG} -f Booking.API/Dockerfile .
                   docker build -t ${INVOICE_IMAGE}:${IMAGE_TAG} -f Invoice.API/Dockerfile .
                   docker build -t ${SITE_IMAGE}:${IMAGE_TAG} -f Site.API/Dockerfile .
-
-                  docker tag ${BOOKING_IMAGE}:${IMAGE_TAG} ${BOOKING_IMAGE}:latest
-                  docker tag ${INVOICE_IMAGE}:${IMAGE_TAG} ${INVOICE_IMAGE}:latest
-                  docker tag ${SITE_IMAGE}:${IMAGE_TAG} ${SITE_IMAGE}:latest
                 """
             }
         }
 
-        // =========================
-        // Push Backend Images (OPTIONAL)
-        // =========================
-        stage('Push Backend Images') {
+        // =============================
+        // Push Images (DISABLED FOR NOW)
+        // =============================
+        stage('Push Images') {
             when {
                 expression { env.PUSH_IMAGES == "true" }
             }
             steps {
                 sh """
                   docker push ${BOOKING_IMAGE}:${IMAGE_TAG}
-                  docker push ${BOOKING_IMAGE}:latest
-
                   docker push ${INVOICE_IMAGE}:${IMAGE_TAG}
-                  docker push ${INVOICE_IMAGE}:latest
-
                   docker push ${SITE_IMAGE}:${IMAGE_TAG}
-                  docker push ${SITE_IMAGE}:latest
                 """
             }
         }
 
-        // =========================
-        // Deploy Swarm Stack
-        // =========================
-        stage('Deploy Backend Stack') {
+        // =============================
+        // PHASE 1 – Deploy Infrastructure
+        // =============================
+        stage('Deploy Infrastructure') {
             steps {
                 sh """
-                  export IMAGE_TAG=${IMAGE_TAG}
-                  docker stack deploy -c docker-compose.swarm.yml ${STACK_NAME}
+                  docker stack deploy \
+                    -c docker-compose.infra.yml \
+                    ${STACK_NAME}
                 """
             }
         }
 
-        // =========================
-        // Swarm Health Check
-        // =========================
-        stage('Health Check') {
+        // =============================
+        // WAIT FOR KAFKA (CONTROL PLANE)
+        // =============================
+        stage('Wait for Kafka & Create Topics') {
             steps {
                 sh '''
-                  echo "Waiting for services to stabilize..."
-                  sleep 40
+                  until docker run --rm \
+                    --network ${STACK_NAME}_pms-network \
+                    confluentinc/cp-kafka:7.6.0 \
+                    kafka-broker-api-versions \
+                      --bootstrap-server kafka:9092 \
+                      >/dev/null 2>&1; do
+                    echo "Kafka not ready yet..."
+                    sleep 5
+                  done
 
-                  FAILED=$(docker stack services ${STACK_NAME} \
-                    --format '{{.Name}} {{.Replicas}}' | grep "0/" || true)
-
-                  if [ -n "$FAILED" ]; then
-                    echo "Some services are not running:"
-                    echo "$FAILED"
-                    exit 1
-                  else
-                    echo "All services are running"
-                  fi
+                  docker run --rm \
+                    --network ${STACK_NAME}_pms-network \
+                    confluentinc/cp-kafka:7.6.0 \
+                    kafka-topics \
+                      --bootstrap-server kafka:9092 \
+                      --create --if-not-exists \
+                      --topic site-created \
+                      --partitions 1 \
+                      --replication-factor 1
                 '''
             }
         }
-    }
 
-    post {
-
-        always {
-            sh '''
-              docker logout || true
-            '''
+        // =============================
+        // PHASE 2 – Deploy Applications
+        // =============================
+        stage('Deploy Application Services') {
+            steps {
+                sh """
+                  export IMAGE_TAG=${IMAGE_TAG}
+                  docker stack deploy \
+                    -c docker-compose.apps.yml \
+                    ${STACK_NAME}
+                """
+            }
         }
 
-        success {
-            echo "Build ${BUILD_NUMBER} deployed successfully to ${STACK_NAME}"
-        }
-
-        failure {
-            echo "Build ${BUILD_NUMBER} failed"
+        stage('Health Check') {
+            steps {
+                sh '''
+                  sleep 40
+                  docker stack services ${STACK_NAME}
+                '''
+            }
         }
     }
 }
