@@ -2,7 +2,9 @@ version: "3.9"
 
 services:
 
-  # ---------------- Zookeeper ----------------
+  # ===============================
+  # Zookeeper
+  # ===============================
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
     environment:
@@ -15,45 +17,45 @@ services:
     volumes:
       - zookeeper_data:/var/lib/zookeeper/data
       - zookeeper_log:/var/lib/zookeeper/log
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "2181"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     deploy:
       replicas: 1
+      restart_policy:
+        condition: on-failure
 
-  # ---------------- Kafka ----------------
+  # ===============================
+  # Kafka
+  # ===============================
   kafka:
     image: confluentinc/cp-kafka:7.6.0
     depends_on:
-      zookeeper:
-        condition: service_healthy
+      - zookeeper   # ← list ONLY (Swarm rule)
     ports:
       - "9092:9092"
       - "29092:29092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      # --- listeners ---
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     networks:
       - pms-network
     volumes:
       - kafka_data:/var/lib/kafka/data
-    healthcheck:
-      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-      start_period: 15s
     deploy:
       replicas: 1
+      restart_policy:
+        condition: on-failure
 
-  # ---------------- Kafka UI ----------------
+  # ===============================
+  # Kafka UI
+  # ===============================
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     ports:
@@ -66,8 +68,12 @@ services:
       - pms-network
     deploy:
       replicas: 1
+      restart_policy:
+        condition: on-failure
 
-  # ---------------- SQL Server ----------------
+  # ===============================
+  # SQL Server
+  # ===============================
 #  sqlserver:
 #    image: mcr.microsoft.com/mssql/server:2022-latest
 #    ports:
@@ -80,27 +86,23 @@ services:
 #      - pms-network
 #    volumes:
 #      - new_sql_data:/var/opt/mssql
-#    healthcheck:
-#      test: >
-#        /opt/mssql-tools18/bin/sqlcmd
-#        -S localhost
-#        -U sa
-#        -P "$${SA_PASSWORD:-YourStrong@Passw0rd}"
-#       -C
-#        -Q "SELECT 1" || exit 1
-#      interval: 15s
-#      timeout: 10s
-#      retries: 10
-#      start_period: 60s
 #    deploy:
 #      replicas: 1
+#      restart_policy:
+#        condition: on-failure
 
+# ===============================
+# Networks
+# ===============================
 networks:
   pms-network:
     driver: overlay
     attachable: true
     name: pms-network
 
+# ===============================
+# Volumes (EXPLICIT – same as devs)
+# ===============================
 volumes:
   zookeeper_data:
     name: pms_zookeeper_data
