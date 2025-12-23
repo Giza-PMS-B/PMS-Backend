@@ -14,6 +14,7 @@ using SharedKernel.MessageBus.Abstraction;
 using SharedKernel.MessageBus.Kafka;
 using SharedKernel.Logging;
 using Serilog;
+using Invoice.Application.EventHandlers;
 
 namespace Invoice.API;
 
@@ -23,6 +24,17 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("AllowAll",
+                policy =>
+                {
+                    policy
+                        .AllowAnyOrigin()
+                        .AllowAnyHeader()
+                        .AllowAnyMethod();
+                });
+        });
         // Add Serilog logging
         builder.AddSerilogLogging();
 
@@ -56,15 +68,23 @@ public class Program
 
         //very importatant to uncomment that when dealing with events
         // Enable event infrastructure
-        builder.Services.AddScoped<IntegrationEventQueue>();
-        builder.Services.AddScoped<IIntegrationEventProducer>(provider => provider.GetRequiredService<IntegrationEventQueue>());
-        builder.Services.AddScoped<IIntegrationEventQueue>(provider => provider.GetRequiredService<IntegrationEventQueue>());
+        // builder.Services.AddScoped<IntegrationEventQueue>();
+        // builder.Services.AddScoped<IIntegrationEventProducer>(provider => provider.GetRequiredService<IntegrationEventQueue>());
+        // builder.Services.AddScoped<IIntegrationEventQueue>(provider => provider.GetRequiredService<IntegrationEventQueue>());
+        // builder.Services.AddSingleton<ConcurrentQueue<IntegrationEvent>>();
+
+        // builder.Services.AddSingleton<IMessagePublisher, KafkaMessagePublisher>();
+        // builder.Services.AddSingleton<IMessageNameResolver, DefaultMessageNameResolver>();
+        // builder.Services.AddSingleton<IMessageSerializer, JsonMessageSerializer>();
+
+        // Enable event infrastructure
+        builder.Services.AddScoped<IIntegrationEventProducer, IntegrationEventQueue>();
+        builder.Services.AddScoped<IIntegrationEventQueue, IntegrationEventQueue>();
         builder.Services.AddSingleton<ConcurrentQueue<IntegrationEvent>>();
 
         builder.Services.AddSingleton<IMessagePublisher, KafkaMessagePublisher>();
         builder.Services.AddSingleton<IMessageNameResolver, DefaultMessageNameResolver>();
         builder.Services.AddSingleton<IMessageSerializer, JsonMessageSerializer>();
-
 
 
         builder.Services.AddKafkaBroker(options =>
@@ -82,7 +102,8 @@ public class Program
                 EnableAutoCommit = false,
                 AutoOffsetReset = Confluent.Kafka.AutoOffsetReset.Earliest
             };
-        });
+        }).AddKafkaConsumer<BookingCreatedEvent, BookingCreatedEventHandler>();
+
 
         // Update UOW registration
         builder.Services.AddScoped<IUOW>(provider => new UOW(
