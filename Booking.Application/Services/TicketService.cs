@@ -1,6 +1,6 @@
 using Booking.Application.DTO;
 using Booking.Model.Entities;
-using Booking.Events.Shared;
+using Booking.Model.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;

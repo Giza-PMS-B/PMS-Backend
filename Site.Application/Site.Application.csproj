@@ -11,9 +11,9 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="../code/Services/Site/Site.Events.Shared/Site.Events.Shared.csproj" />
       <ProjectReference Include="../SharedKernel.EventDriven.Abstraction/SharedKernel.EventDriven.Abstraction.csproj" />
       <ProjectReference Include="../SharedKernel.Infratsrucrure.Persistent.Abstraction/SharedKernel.Infratsrucrure.Persistent.Abstraction.csproj" />
+      <ProjectReference Include="../Site.Model.Shared/Site.Model.Shared.csproj" />
       <ProjectReference Include="../Site.Model/Site.Model.csproj" />
     </ItemGroup>
 
