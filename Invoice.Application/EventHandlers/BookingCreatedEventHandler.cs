@@ -1,7 +1,7 @@
 using System;
 using Invoice.Model.Entities;
 using Microsoft.Extensions.Logging;
-using SharedKernel.EventDriven.Abstraction;
+using Booking.Events.Shared;
 using SharedKernel.Infrastructure.Persistent.Abstraction;
 using SharedKernel.MessageBus.Abstraction;
 

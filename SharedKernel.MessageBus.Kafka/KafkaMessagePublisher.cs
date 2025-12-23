@@ -10,7 +10,7 @@ using Microsoft.Extensions.Options;
 using SharedKernel.EventDriven.Abstraction;
 using SharedKernel.MessageBus.Abstraction;
 using SharedKernel.MessageBus.Kafka.Configurations;
-using Site.Model.Shared.Events;
+
 
 namespace SharedKernel.MessageBus.Kafka
 {

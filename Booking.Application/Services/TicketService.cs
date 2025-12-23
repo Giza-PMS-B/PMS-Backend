@@ -1,11 +1,13 @@
 using Booking.Application.DTO;
 using Booking.Model.Entities;
+using Booking.Events.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using SharedKernel.EventDriven.Abstraction;
 using SharedKernel.Infrastructure.Persistent.Abstraction;
 using SharedKernel.MessageBus.Abstraction;
+
 
 namespace Booking.Application.Services;
 

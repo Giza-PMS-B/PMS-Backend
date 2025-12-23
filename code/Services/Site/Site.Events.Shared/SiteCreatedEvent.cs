@@ -1,6 +1,6 @@
 
 using SharedKernel.MessageBus.Abstraction;
-namespace Site.Model.Shared.Events;
+namespace Site.Shared.Events;
 
 public record SiteCreatedEvent : IntegrationEvent
 {

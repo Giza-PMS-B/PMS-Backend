@@ -71,6 +71,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Booking.Model", "code\Servi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Invoice.Model", "code\Services\Invoice\Invoice.Model\Invoice.Model.csproj", "{70912CEB-1D20-496D-A05C-06F162867104}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Site.Events.Shared", "code\Services\Site\Site.Events.Shared\Site.Events.Shared.csproj", "{2F3DD9A9-59C2-43D0-AADE-C91C4FE76DBE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Booking.Events.Shared", "code\Services\Booking\Booking.Events.Shared\Booking.Events.Shared.csproj", "{98DE7FCD-8F7B-4AC8-AFC0-2E344C65D628}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -185,6 +189,14 @@ Global
 		{70912CEB-1D20-496D-A05C-06F162867104}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{70912CEB-1D20-496D-A05C-06F162867104}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{70912CEB-1D20-496D-A05C-06F162867104}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2F3DD9A9-59C2-43D0-AADE-C91C4FE76DBE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2F3DD9A9-59C2-43D0-AADE-C91C4FE76DBE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2F3DD9A9-59C2-43D0-AADE-C91C4FE76DBE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2F3DD9A9-59C2-43D0-AADE-C91C4FE76DBE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{98DE7FCD-8F7B-4AC8-AFC0-2E344C65D628}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{98DE7FCD-8F7B-4AC8-AFC0-2E344C65D628}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{98DE7FCD-8F7B-4AC8-AFC0-2E344C65D628}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{98DE7FCD-8F7B-4AC8-AFC0-2E344C65D628}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -223,5 +235,7 @@ Global
 		{8A24AD27-8AFE-4007-98EF-4741146765A4} = {976E2B35-689A-42F9-B2F2-FB02CE737352}
 		{21B76233-8D49-4E2B-AD0C-482BB2CC9CDB} = {8A40F07C-AA77-4A63-A3C8-9BC4E0D6A18A}
 		{70912CEB-1D20-496D-A05C-06F162867104} = {CA460614-7685-4523-BCA1-F1BF7E826DD1}
+		{2F3DD9A9-59C2-43D0-AADE-C91C4FE76DBE} = {976E2B35-689A-42F9-B2F2-FB02CE737352}
+		{98DE7FCD-8F7B-4AC8-AFC0-2E344C65D628} = {8A40F07C-AA77-4A63-A3C8-9BC4E0D6A18A}
 	EndGlobalSection
 EndGlobal
