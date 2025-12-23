@@ -17,9 +17,8 @@ x-dotnet-environment: &dotnet-environment
   Kafka__Consumer__AutoOffsetReset: earliest
 
 # Shared service deployment configuration
+# Note: networks must be defined at service level, not in deploy section
 x-dotnet-service-deploy: &dotnet-service-deploy
-  networks:
-    - pms-network
   restart_policy:
     condition: on-failure
     delay: 5s
