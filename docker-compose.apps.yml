@@ -1,0 +1,81 @@
+version: "3.9"
+
+x-dotnet-environment: &dotnet-environment
+  ASPNETCORE_ENVIRONMENT: Production
+  ASPNETCORE_HTTP_PORTS: 8080
+  Kafka__BootstrapServers: kafka:9092
+  Kafka__Producer__Acks: all
+  Kafka__Producer__MessageTimeoutMs: 30000
+  Kafka__Consumer__EnableAutoCommit: "false"
+  Kafka__Consumer__AutoOffsetReset: earliest
+
+x-dotnet-service: &dotnet-service
+  networks:
+    - pms-network
+  deploy:
+    replicas: 1
+    restart_policy:
+      condition: on-failure
+      delay: 10s
+      max_attempts: 10
+
+services:
+
+  # ---------------- Booking API ----------------
+  booking-service:
+    <<: *dotnet-service
+    image: wagihh/pms-booking-service:${IMAGE_TAG}
+    ports:
+      - "5001:8080"
+    environment:
+      <<: *dotnet-environment
+      Kafka__ClientId: BookingService
+      Kafka__Consumer__GroupId: BookingServiceGroup
+      ConnectionStrings__DefaultConnection: >
+        Server=sqlserver;
+        Database=PMS_Booking;
+        User Id=sa;
+        Password=${SA_PASSWORD};
+        TrustServerCertificate=True;
+        MultipleActiveResultSets=True
+
+  # ---------------- Invoice API ----------------
+  invoice-service:
+    <<: *dotnet-service
+    image: wagihh/pms-invoice-service:${IMAGE_TAG}
+    ports:
+      - "5002:8080"
+    environment:
+      <<: *dotnet-environment
+      Kafka__ClientId: InvoiceService
+      Kafka__Consumer__GroupId: InvoiceServiceGroup
+      ConnectionStrings__DefaultConnection: >
+        Server=sqlserver;
+        Database=PMS_Invoice;
+        User Id=sa;
+        Password=${SA_PASSWORD};
+        TrustServerCertificate=True;
+        MultipleActiveResultSets=True
+
+  # ---------------- Site API ----------------
+  site-service:
+    <<: *dotnet-service
+    image: wagihh/pms-site-service:${IMAGE_TAG}
+    ports:
+      - "5003:8080"
+    environment:
+      <<: *dotnet-environment
+      Kafka__ClientId: SiteService
+      Kafka__Consumer__GroupId: SiteServiceGroup
+      ConnectionStrings__DefaultConnection: >
+        Server=sqlserver;
+        Database=PMS_Site;
+        User Id=sa;
+        Password=${SA_PASSWORD};
+        TrustServerCertificate=True;
+        MultipleActiveResultSets=True
+
+networks:
+  pms-network:
+    external: true
+    name: pms-network
