@@ -8,6 +8,7 @@ using Booking.Model.Entities;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using SharedKernel.EventDriven;
 using SharedKernel.EventDriven.Abstraction;
 using SharedKernel.Infrastructure.Persistent;
@@ -122,6 +123,12 @@ public class Program
         try
         {
             Log.Information("Starting Booking API");
+            
+            // Log when shutdown is requested
+            var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+            lifetime.ApplicationStopping.Register(() => Log.Information("Application stopping signal received"));
+            lifetime.ApplicationStopped.Register(() => Log.Information("Application stopped"));
+            
             app.Run();
         }
         catch (Exception ex)

@@ -20,9 +20,10 @@ x-dotnet-environment: &dotnet-environment
 # Note: networks must be defined at service level, not in deploy section
 x-dotnet-service-deploy: &dotnet-service-deploy
   restart_policy:
-    condition: on-failure
+    condition: any
     delay: 5s
-    max_attempts: 3
+    # max_attempts: 0 means unlimited in Docker Swarm
+    max_attempts: 0
     window: 120s
   update_config:
     parallelism: 1
@@ -83,6 +84,7 @@ services:
   # Note: depends_on is ignored in Swarm, rely on health checks and restart policies
   kafka:
     image: confluentinc/cp-kafka:7.6.0
+    hostname: kafka
     ports:
       - "9092:9092"
     environment:
@@ -111,10 +113,10 @@ services:
         failure_action: rollback
     healthcheck:
       test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
+      interval: 15s
+      timeout: 15s
+      retries: 10
+      start_period: 60s
 
   # SQL Server Database - COMMENTED OUT FOR TESTING (Kafka/Zookeeper/APIs only)
   # sqlserver:
@@ -156,10 +158,28 @@ services:
       - pms-network
     ports:
       - "5001:8080"
+    # Wait for Kafka DNS to be resolvable before starting (Kafka client will retry connections)
+    entrypoint: >
+      sh -c "
+      echo 'Waiting for Kafka DNS resolution...';
+      i=0;
+      while [ $$i -lt 30 ]; do
+        if getent hosts kafka > /dev/null 2>&1; then
+          echo 'Kafka DNS resolved, starting application...';
+          break;
+        fi;
+        i=$$((i+1));
+        echo \"Attempt $$i/30: Kafka DNS not ready, waiting 2s...\";
+        sleep 2;
+      done;
+      exec dotnet Booking.API.dll
+      "
     environment:
       <<: *dotnet-environment
       Kafka__ClientId: BookingService
       Kafka__Consumer__GroupId: BookingServiceGroup
+      # Temporary dummy connection string for testing without SQL Server
+      ConnectionStrings__DefaultConnection: "Server=localhost;Database=temp;User Id=sa;Password=temp;TrustServerCertificate=True;Connect Timeout=1;"
       # ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=PMS_Booking;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;MultipleActiveResultSets=True;"
     # secrets:
     #   - source: sa_password
@@ -167,12 +187,13 @@ services:
     #     uid: '1000'
     #     gid: '1000'
     #     mode: 0400
+    # Health check - TCP port check (same as Site service which is working)
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/api/booking/health || exit 1"]
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8080' || exit 1"]
       interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 90s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
     deploy:
       <<: *dotnet-service-deploy
       replicas: 2
@@ -191,10 +212,28 @@ services:
       - pms-network
     ports:
       - "5002:8080"
+    # Wait for Kafka DNS to be resolvable before starting (Kafka client will retry connections)
+    entrypoint: >
+      sh -c "
+      echo 'Waiting for Kafka DNS resolution...';
+      i=0;
+      while [ $$i -lt 30 ]; do
+        if getent hosts kafka > /dev/null 2>&1; then
+          echo 'Kafka DNS resolved, starting application...';
+          break;
+        fi;
+        i=$$((i+1));
+        echo \"Attempt $$i/30: Kafka DNS not ready, waiting 2s...\";
+        sleep 2;
+      done;
+      exec dotnet Invoice.API.dll
+      "
     environment:
       <<: *dotnet-environment
       Kafka__ClientId: InvoiceService
       Kafka__Consumer__GroupId: InvoiceServiceGroup
+      # Temporary dummy connection string for testing without SQL Server
+      ConnectionStrings__DefaultConnection: "Server=localhost;Database=temp;User Id=sa;Password=temp;TrustServerCertificate=True;Connect Timeout=1;"
       # ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=PMS_Invoice;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;MultipleActiveResultSets=True;"
     # secrets:
     #   - source: sa_password
@@ -202,12 +241,13 @@ services:
     #     uid: '1000'
     #     gid: '1000'
     #     mode: 0400
+    # Health check - TCP port check (same as Site service which is working)
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/api/invoice/health || exit 1"]
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8080' || exit 1"]
       interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 90s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
     deploy:
       <<: *dotnet-service-deploy
       replicas: 2
@@ -226,10 +266,28 @@ services:
       - pms-network
     ports:
       - "5003:8080"
+    # Wait for Kafka DNS to be resolvable before starting (Kafka client will retry connections)
+    entrypoint: >
+      sh -c "
+      echo 'Waiting for Kafka DNS resolution...';
+      i=0;
+      while [ $$i -lt 30 ]; do
+        if getent hosts kafka > /dev/null 2>&1; then
+          echo 'Kafka DNS resolved, starting application...';
+          break;
+        fi;
+        i=$$((i+1));
+        echo \"Attempt $$i/30: Kafka DNS not ready, waiting 2s...\";
+        sleep 2;
+      done;
+      exec dotnet Site.API.dll
+      "
     environment:
       <<: *dotnet-environment
       Kafka__ClientId: SiteService
       Kafka__Consumer__GroupId: SiteServiceGroup
+      # Temporary dummy connection string for testing without SQL Server
+      ConnectionStrings__DefaultConnection: "Server=localhost;Database=temp;User Id=sa;Password=temp;TrustServerCertificate=True;Connect Timeout=1;"
       # ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=PMS_Site;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;MultipleActiveResultSets=True;"
     # secrets:
     #   - source: sa_password
@@ -237,12 +295,13 @@ services:
     #     uid: '1000'
     #     gid: '1000'
     #     mode: 0400
+    # Health check - TCP port check (no external tools needed)
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/api/site || exit 1"]
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8080' || exit 1"]
       interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 90s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
     deploy:
       <<: *dotnet-service-deploy
       replicas: 2
