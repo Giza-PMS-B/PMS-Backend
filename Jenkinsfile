@@ -138,21 +138,23 @@ pipeline {
             }
         }
 
-        // =========================
-        // Push Backend Images
-        // =========================
         stage('Push Backend Images') {
             steps {
-                sh """
+                sh '''
+                  set -e
+
+                  echo "Pushing Booking Service..."
                   docker push ${BOOKING_IMAGE}:${IMAGE_TAG}
                   docker push ${BOOKING_IMAGE}:latest
 
+                  echo "Pushing Invoice Service..."
                   docker push ${INVOICE_IMAGE}:${IMAGE_TAG}
                   docker push ${INVOICE_IMAGE}:latest
 
+                  echo "Pushing Site Service..."
                   docker push ${SITE_IMAGE}:${IMAGE_TAG}
                   docker push ${SITE_IMAGE}:latest
-                """
+                '''
             }
         }
 
