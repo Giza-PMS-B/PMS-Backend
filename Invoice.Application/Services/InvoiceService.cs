@@ -4,6 +4,7 @@ using Invoice.Application.DTO;
 using Invoice.Model.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+
 using SharedKernel.Infrastructure.Persistent.Abstraction;
 
 namespace Invoice.Application.Services;
@@ -14,6 +15,8 @@ public class InvoiceService
     private readonly IRepo<Ticket> _ticketRepository;
     private readonly IUOW _uow;
     private readonly IConfiguration _configuration;
+
+
 
     public InvoiceService(IRepo<Model.Entities.Invoice> invoiceRepository, IRepo<Ticket> ticketRepository, IUOW uow, IConfiguration configuration)
     {
@@ -35,7 +38,10 @@ public class InvoiceService
 
     public async Task<Model.Entities.Invoice> CreateInvoiceAsync(CreateInvoiceDTO createInvoiceDTO)
     {
+
         await ValidateTicketExistsAsync(createInvoiceDTO.TicketId);
+
+
 
         var invoice = new Model.Entities.Invoice
         {
@@ -82,7 +88,7 @@ public class InvoiceService
     }
     private decimal CalcAmountBeforeTax(decimal totalPrice, decimal TaxAmount)
     {
-        return totalPrice - (TaxAmount / 100) * totalPrice;
+        return totalPrice - ((TaxAmount / 100) * totalPrice);
     }
     private async Task<Ticket> GetTicket(Guid ticketId)
     {
