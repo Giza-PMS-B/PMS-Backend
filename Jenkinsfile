@@ -10,7 +10,7 @@ pipeline {
         // =========================
         // Docker Hub
         // =========================
-        DOCKER_REPO = "wagihh"
+        DOCKER_REPO = "PMS-GIZA"
 
         BOOKING_IMAGE = "${DOCKER_REPO}/pms-booking-service"
         INVOICE_IMAGE = "${DOCKER_REPO}/pms-invoice-service"
@@ -92,20 +92,20 @@ pipeline {
         // =========================
         // Push Backend Images - SKIPPED FOR NOW (uncomment when ready)
         // =========================
-        // stage('Push Backend Images') {
-        //     steps {
-        //         sh """
-        //           docker push ${BOOKING_IMAGE}:${IMAGE_TAG}
-        //           docker push ${BOOKING_IMAGE}:latest
-        //
-        //           docker push ${INVOICE_IMAGE}:${IMAGE_TAG}
-        //           docker push ${INVOICE_IMAGE}:latest
-        //
-        //           docker push ${SITE_IMAGE}:${IMAGE_TAG}
-        //           docker push ${SITE_IMAGE}:latest
-        //         """
-        //     }
-        // }
+         stage('Push Backend Images') {
+             steps {
+                 sh """
+                   docker push ${BOOKING_IMAGE}:${IMAGE_TAG}
+                   docker push ${BOOKING_IMAGE}:latest
+        
+                   docker push ${INVOICE_IMAGE}:${IMAGE_TAG}
+                   docker push ${INVOICE_IMAGE}:latest
+        
+                   docker push ${SITE_IMAGE}:${IMAGE_TAG}
+                   docker push ${SITE_IMAGE}:latest
+                 """
+             }
+        }
 
         // =========================
         // Deploy Swarm Stack
