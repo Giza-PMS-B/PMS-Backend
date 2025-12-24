@@ -119,37 +119,37 @@ services:
       start_period: 60s
 
   # SQL Server Database - COMMENTED OUT FOR TESTING (Kafka/Zookeeper/APIs only)
-  # sqlserver:
-  #   image: mcr.microsoft.com/mssql/server:2022-latest
-  #   ports:
-  #     - "1433:1433"
-  #   networks:
-  #     - pms-network
-  #   environment:
-  #     ACCEPT_EULA: "Y"
-  #     MSSQL_SA_PASSWORD_FILE: /run/secrets/sa_password
-  #     MSSQL_PID: "Developer"
-  #   secrets:
-  #     - sa_password
-  #   volumes:
-  #     - sql_data:/var/opt/mssql
-  #   deploy:
-  #     replicas: 1
-  #     placement:
-  #       constraints:
-  #         - node.role == manager
-  #     restart_policy:
-  #       condition: on-failure
-  #     update_config:
-  #       parallelism: 1
-  #       delay: 30s
-  #       failure_action: rollback
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$(cat /run/secrets/sa_password)\" -C -Q \"SELECT 1\" || exit 1"]
-  #     interval: 15s
-  #     timeout: 10s
-  #     retries: 10
-  #     start_period: 60s
+   sqlserver:
+     image: mcr.microsoft.com/mssql/server:2022-latest
+     ports:
+       - "1433:1433"
+     networks:
+       - pms-network
+     environment:
+       ACCEPT_EULA: "Y"
+       MSSQL_SA_PASSWORD_FILE: /run/secrets/sa_password
+       MSSQL_PID: "Developer"
+     secrets:
+       - sa_password
+     volumes:
+       - sql_data:/var/opt/mssql
+     deploy:
+       replicas: 1
+       placement:
+         constraints:
+           - node.role == manager
+       restart_policy:
+         condition: on-failure
+       update_config:
+         parallelism: 1
+         delay: 30s
+         failure_action: rollback
+     healthcheck:
+       test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$(cat /run/secrets/sa_password)\" -C -Q \"SELECT 1\" || exit 1"]
+       interval: 15s
+       timeout: 10s
+       retries: 10
+       start_period: 60s
 
   # Booking Service
   booking-service:
@@ -178,15 +178,13 @@ services:
       <<: *dotnet-environment
       Kafka__ClientId: BookingService
       Kafka__Consumer__GroupId: BookingServiceGroup
-      # Temporary dummy connection string for testing without SQL Server
-      ConnectionStrings__DefaultConnection: "Server=localhost;Database=temp;User Id=sa;Password=temp;TrustServerCertificate=True;Connect Timeout=1;"
-      # ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=PMS_Booking;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;MultipleActiveResultSets=True;"
-    # secrets:
-    #   - source: sa_password
-    #     target: sa_password
-    #     uid: '1000'
-    #     gid: '1000'
-    #     mode: 0400
+       ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=PMS_Booking;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;MultipleActiveResultSets=True;"
+     secrets:
+       - source: sa_password
+         target: sa_password
+         uid: '1000'
+         gid: '1000'
+         mode: 0400
     # Health check - TCP port check (same as Site service which is working)
     healthcheck:
       test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8080' || exit 1"]
@@ -232,15 +230,13 @@ services:
       <<: *dotnet-environment
       Kafka__ClientId: InvoiceService
       Kafka__Consumer__GroupId: InvoiceServiceGroup
-      # Temporary dummy connection string for testing without SQL Server
-      ConnectionStrings__DefaultConnection: "Server=localhost;Database=temp;User Id=sa;Password=temp;TrustServerCertificate=True;Connect Timeout=1;"
-      # ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=PMS_Invoice;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;MultipleActiveResultSets=True;"
-    # secrets:
-    #   - source: sa_password
-    #     target: sa_password
-    #     uid: '1000'
-    #     gid: '1000'
-    #     mode: 0400
+       ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=PMS_Invoice;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;MultipleActiveResultSets=True;"
+     secrets:
+       - source: sa_password
+         target: sa_password
+         uid: '1000'
+         gid: '1000'
+         mode: 0400
     # Health check - TCP port check (same as Site service which is working)
     healthcheck:
       test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8080' || exit 1"]
@@ -286,15 +282,13 @@ services:
       <<: *dotnet-environment
       Kafka__ClientId: SiteService
       Kafka__Consumer__GroupId: SiteServiceGroup
-      # Temporary dummy connection string for testing without SQL Server
-      ConnectionStrings__DefaultConnection: "Server=localhost;Database=temp;User Id=sa;Password=temp;TrustServerCertificate=True;Connect Timeout=1;"
-      # ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=PMS_Site;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;MultipleActiveResultSets=True;"
-    # secrets:
-    #   - source: sa_password
-    #     target: sa_password
-    #     uid: '1000'
-    #     gid: '1000'
-    #     mode: 0400
+       ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=PMS_Site;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;MultipleActiveResultSets=True;"
+     secrets:
+       - source: sa_password
+         target: sa_password
+         uid: '1000'
+         gid: '1000'
+         mode: 0400
     # Health check - TCP port check (no external tools needed)
     healthcheck:
       test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8080' || exit 1"]
@@ -325,11 +319,11 @@ volumes:
     name: pms_zookeeper_log
   kafka_data:
     name: pms_kafka_data
-  # sql_data:
-  #   name: pms_sql_data
+   sql_data:
+     name: pms_sql_data
 
-# secrets:
-#   sa_password:
-#     external: true
-#     name: sa_password
+ secrets:
+   sa_password:
+     external: true
+     name: sa_password
 
