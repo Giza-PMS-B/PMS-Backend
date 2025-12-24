@@ -19,6 +19,17 @@ public class InvoiceService
         _ticketRepository = ticketRepository;
         _uow = uow;
     }
+
+    public async Task SendInvoiceToERB(CreateInvoiceDTO createInvoiceDTO)
+    {
+        var invoice = await CreateInvoiceAsync(createInvoiceDTO);
+        var ticket = await GetTicket(createInvoiceDTO.TicketId);
+        var InvoiceERBDTO = CrateInvoiceERBDTO(invoice, ticket);
+
+        //TODO : Send this InvoiceERBDTO to the ERB Service (via Https)
+    }
+
+
     public async Task<Model.Entities.Invoice> CreateInvoiceAsync(CreateInvoiceDTO createInvoiceDTO)
     {
         await ValidateTicketExistsAsync(createInvoiceDTO.TicketId);
@@ -32,12 +43,9 @@ public class InvoiceService
             TicketSerialNumber = GenerateSerial(),
             TicketId = createInvoiceDTO.TicketId
         };
+
         var invoiceHtmlDocumentPath = await ProcessInvoiceHtmlDocument(invoice);
         invoice.HtmlDocumentPath = invoiceHtmlDocumentPath;
-
-        var ticket = await GetTicket(createInvoiceDTO.TicketId);
-
-        var InvoiceERBDTO = CrateInvoiceERBDTO(invoice, ticket);
 
         await _invoiceRepository.AddAsync(invoice);
         await _uow.SaveChangesAsync();
@@ -71,7 +79,7 @@ public class InvoiceService
     }
     private decimal CalcAmountBeforeTax(decimal totalPrice, decimal TaxAmount)
     {
-        return (TaxAmount / 100) * totalPrice + totalPrice;
+        return totalPrice - (TaxAmount / 100) * totalPrice;
     }
     private async Task<Ticket> GetTicket(Guid ticketId)
     {

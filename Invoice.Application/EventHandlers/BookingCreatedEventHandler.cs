@@ -41,7 +41,7 @@ public class BookingCreatedEventHandler : IMessageHandler<BookingCreatedEvent>
         await _siteRepository.AddAsync(ticket);
         await _uow.SaveChangesAsync();
 
-        await _invoiceService.CreateInvoiceAsync(
+        await _invoiceService.SendInvoiceToERB(
             new DTO.CreateInvoiceDTO
             {
                 TotalAmountAfterTax = ticket.TotalPrice,
