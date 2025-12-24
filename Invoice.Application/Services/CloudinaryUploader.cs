@@ -16,8 +16,16 @@ public class CloudinaryUploader
         var apiKey = Environment.GetEnvironmentVariable("CLOUDINARY_API_KEY");
         var apiSecret = Environment.GetEnvironmentVariable("CLOUDINARY_API_SECRET");
 
-        var account = new Account(cloudName, apiKey, apiSecret);
+        if (string.IsNullOrEmpty(cloudName) || string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(apiSecret))
+        {
+            throw new InvalidOperationException(
+                $"Cloudinary credentials not found. " +
+                $"CloudName: {(string.IsNullOrEmpty(cloudName) ? "MISSING" : "OK")}, " +
+                $"ApiKey: {(string.IsNullOrEmpty(apiKey) ? "MISSING" : "OK")}, " +
+                $"ApiSecret: {(string.IsNullOrEmpty(apiSecret) ? "MISSING" : "OK")}");
+        }
 
+        var account = new Account(cloudName, apiKey, apiSecret);
         _cloudinary = new Cloudinary(account);
     }
 

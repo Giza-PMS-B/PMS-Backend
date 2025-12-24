@@ -24,9 +24,10 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        Env.Load(Path.Combine(Directory.GetCurrentDirectory(), "..", ".env"));
-
         var builder = WebApplication.CreateBuilder(args);
+
+        // Add environment variables to configuration
+        builder.Configuration.AddEnvironmentVariables();
 
         builder.Services.AddCors(options =>
         {

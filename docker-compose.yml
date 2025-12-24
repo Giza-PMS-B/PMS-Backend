@@ -138,6 +138,15 @@ services:
       Kafka__ClientId: InvoiceService
       Kafka__Consumer__GroupId: InvoiceServiceGroup
       ConnectionStrings__DefaultConnection: ${INVOICE_DB_CONNECTION:-Server=sqlserver;Database=PMS_Invoice;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;MultipleActiveResultSets=True;}
+      # Cloudinary Configuration
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+      # Azure Configuration (if needed)
+      CLIENT_ID: ${CLIENT_ID}
+      CLIENT_SECRET: ${CLIENT_SECRET}
+      TENANT_ID: ${TENANT_ID}
+      ONEDRIVE_FOLDER: ${ONEDRIVE_FOLDER}
 
   # Site Service
   site-service:
