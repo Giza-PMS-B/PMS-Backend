@@ -31,7 +31,7 @@ public class InvoiceService
             TicketSerialNumber = GenerateSerial(),
             TicketId = createInvoiceDTO.TicketId
         };
-        var invoiceHtmlDocumentPath = await SaveInvoiceHtmlDoc(createInvoiceDTO.HtmlDocument);
+        var invoiceHtmlDocumentPath = await SaveInvoiceHtmlDoc(invoice.Id, createInvoiceDTO.HtmlDocument);
         invoice.HtmlDocumentPath = invoiceHtmlDocumentPath;
 
         var ticket = await GetTicket(createInvoiceDTO.TicketId);
@@ -90,9 +90,11 @@ public class InvoiceService
     }
 
 
-    private async Task<string> SaveInvoiceHtmlDoc(string htmlDocument)
+    private async Task<string> SaveInvoiceHtmlDoc(Guid invoiceId, string htmlDocument)
     {
-        return "https://5023/docs/1";
+        // Example URL with invoice ID appended
+        string url = $"https://5023/docs/invoices/{invoiceId}";
+        return url;
     }
 
 }
