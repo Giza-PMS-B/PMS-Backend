@@ -83,30 +83,30 @@ pipeline {
         // =========================
         // Push Backend Images with Retry
         // =========================
-        stage('Push Backend Images') {
-            steps {
-                script {
-                    def images = [
-                        ["${BOOKING_IMAGE}", "Booking"],
-                        ["${INVOICE_IMAGE}", "Invoice"],
-                        ["${SITE_IMAGE}", "Site"]
-                    ]
-                    
-                    for (img in images) {
-                        def imageName = img[0]
-                        def serviceName = img[1]
-                        
-                        retry(3) {
-                            echo "Pushing ${serviceName} service images (${imageName})..."
-                            sh """
-                              docker push ${imageName}:${IMAGE_TAG}
-                              docker push ${imageName}:latest
-                            """
-                        }
-                    }
-                }
-            }
-        }
+       // stage('Push Backend Images') {
+       //     steps {
+       //         script {
+       //             def images = [
+       //                 ["${BOOKING_IMAGE}", "Booking"],
+       //                 ["${INVOICE_IMAGE}", "Invoice"],
+       //                 ["${SITE_IMAGE}", "Site"]
+       //             ]
+       //             
+       //             for (img in images) {
+       //                 def imageName = img[0]
+       //                 def serviceName = img[1]
+       //                 
+       //                 retry(3) {
+       //                     echo "Pushing ${serviceName} service images (${imageName})..."
+       //                     sh """
+       //                       docker push ${imageName}:${IMAGE_TAG}
+       //                       docker push ${imageName}:latest
+       //                     """
+       //                 }
+       //             }
+       //         }
+       //     }
+       // }
         // =========================
         // Deploy Swarm Stack
         // =========================
