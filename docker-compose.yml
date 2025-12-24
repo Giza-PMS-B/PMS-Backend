@@ -133,6 +133,8 @@ services:
       CLIENT_SECRET: ${CLIENT_SECRET}
       TENANT_ID: ${TENANT_ID}
       ONEDRIVE_FOLDER: ${ONEDRIVE_FOLDER}
+      #TAX
+      TAX_AMOUNT: ${TAX_AMOUNT}
 
   # Site Service
   site-service:
