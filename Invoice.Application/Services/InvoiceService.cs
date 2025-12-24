@@ -20,7 +20,7 @@ public class InvoiceService
     }
     public async Task<Model.Entities.Invoice> CreateInvoiceAsync(CreateInvoiceDTO createInvoiceDTO)
     {
-        //await ValidateTicketExistsAsync(createInvoiceDTO.TicketId);
+        await ValidateTicketExistsAsync(createInvoiceDTO.TicketId);
 
         var invoice = new Model.Entities.Invoice
         {
