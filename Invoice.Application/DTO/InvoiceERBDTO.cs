@@ -6,7 +6,7 @@ public class InvoiceERBDTO
 {
     public Guid InvoiceId { get; set; }
     public Guid TicketId { get; set; }
-    public Guid TicketSerial { get; set; }
+    public string TicketSerial { get; set; }
     public DateTime BookingFrom { get; set; }
     public DateTime BookingTo { get; set; }
     public int NumOfHours { get; set; }

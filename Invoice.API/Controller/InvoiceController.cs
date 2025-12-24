@@ -1,6 +1,8 @@
+using Invoice.Application.DTO;
 using Invoice.Application.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Invoice.API.Controller
 {
@@ -28,6 +30,11 @@ namespace Invoice.API.Controller
         public string CheckHealthLegacy()
         {
             return "Invoice API is running";
+        }
+        [HttpPost]
+        public async Task<Model.Entities.Invoice> CreateInvoice(CreateInvoiceDTO createInvoiceDTO)
+        {
+            return await _invoiceService.CreateInvoiceAsync(createInvoiceDTO);
         }
     }
 }
