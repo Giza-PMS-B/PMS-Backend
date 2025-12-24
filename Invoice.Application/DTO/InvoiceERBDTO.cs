@@ -14,6 +14,6 @@ public class InvoiceERBDTO
     public decimal TotalAmountBeforeTax { get; set; }
     public decimal TotalAmountAfterTax { get; set; }
     public string TicketSerialNumber { get; set; }
-    public string InvoiceDocPath { get; set; }
+    public string InvoiceHTMLDoc { get; set; }
 
 }

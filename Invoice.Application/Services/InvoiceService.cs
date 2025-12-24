@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using System.Net.Http.Headers;
+using System.Text;
 using System.Threading.Tasks;
 using Invoice.Application.DTO;
 using Invoice.Model.Entities;
@@ -31,8 +33,7 @@ public class InvoiceService
         var invoice = await CreateInvoiceAsync(createInvoiceDTO);
         var ticket = await GetTicket(createInvoiceDTO.TicketId);
         var InvoiceERBDTO = CrateInvoiceERBDTO(invoice, ticket);
-
-        //TODO : Send this InvoiceERBDTO to the ERB Service (via Https)
+        await ERBIntegrationService.SendInvoiceToErpAsync(InvoiceERBDTO);
     }
 
 
@@ -40,8 +41,6 @@ public class InvoiceService
     {
 
         await ValidateTicketExistsAsync(createInvoiceDTO.TicketId);
-
-
 
         var invoice = new Model.Entities.Invoice
         {
@@ -53,8 +52,8 @@ public class InvoiceService
             TicketId = createInvoiceDTO.TicketId
         };
 
-        var invoiceHtmlDocumentPath = await ProcessInvoiceHtmlDocument(invoice);
-        invoice.HtmlDocumentPath = invoiceHtmlDocumentPath;
+        var invoiceHtmlDocument = CreateInvoiceHtmlDocument(invoice);
+        invoice.HtmlDocument = invoiceHtmlDocument;
 
         await _invoiceRepository.AddAsync(invoice);
         await _uow.SaveChangesAsync();
@@ -75,7 +74,7 @@ public class InvoiceService
             TotalAmountBeforeTax = CalcAmountBeforeTax(ticket.TotalPrice, invoice.TaxAmount),
             TotalAmountAfterTax = ticket.TotalPrice,
             TicketSerialNumber = invoice.TicketSerialNumber,
-            InvoiceDocPath = invoice.HtmlDocumentPath
+            InvoiceHTMLDoc = invoice.HtmlDocument
         };
     }
     private async Task ValidateTicketExistsAsync(Guid ticketId)
@@ -107,12 +106,12 @@ public class InvoiceService
         return random.Next(0, 1_000_000_000).ToString("D9");
     }
 
-    private async Task<string> ProcessInvoiceHtmlDocument(Model.Entities.Invoice invoice)
-    {
-        string document = CreateInvoiceHtmlDocument(invoice);
-        string url = await SaveInvoiceHtmlDoc(document, invoice.TicketSerialNumber);
-        return url;
-    }
+    // private async Task<string> ProcessInvoiceHtmlDocument(Model.Entities.Invoice invoice)
+    // {
+    //     string document = CreateInvoiceHtmlDocument(invoice);
+    //     string url = await SaveInvoiceHtmlDoc(document, invoice.TicketSerialNumber);
+    //     return url;
+    // }
     private string CreateInvoiceHtmlDocument(Model.Entities.Invoice invoice)
     {
         return $@"
@@ -187,11 +186,10 @@ public class InvoiceService
         </body>
         </html>";
     }
-    private async Task<string> SaveInvoiceHtmlDoc(string htmlDocument, string fileName)
-    {
-        var uploader = new CloudinaryUploader();
-        return await uploader.UploadHtmlAsync(htmlDocument, fileName);
-    }
-
+    // private async Task<string> SaveInvoiceHtmlDoc(string htmlDocument, string fileName)
+    // {
+    //     var uploader = new CloudinaryUploader();
+    //     return await uploader.UploadHtmlAsync(htmlDocument, fileName);
+    // }
 }
 
