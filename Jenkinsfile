@@ -1,24 +1,19 @@
 pipeline {
     agent any
-
     environment {
         // =========================
         // Swarm
         // =========================
         STACK_NAME = "pms-backend"
-
         // =========================
         // Docker Hub
         // =========================
         DOCKER_REPO = "omareldamaty"
-
         BOOKING_IMAGE = "${DOCKER_REPO}/pms-booking-service"
         INVOICE_IMAGE = "${DOCKER_REPO}/pms-invoice-service"
         SITE_IMAGE    = "${DOCKER_REPO}/pms-site-service"
-
         IMAGE_TAG = "${BUILD_NUMBER}"
     }
-
     stages {
         // =========================
         // Checkout
@@ -32,7 +27,6 @@ pipeline {
                 )
             }
         }
-
         // =========================
         // Verify Docker Swarm
         // =========================
@@ -47,26 +41,24 @@ pipeline {
                 '''
             }
         }
-
         // =========================
-        // Docker Login - SKIPPED FOR NOW (not needed if not pushing images)
+        // Docker Login
         // =========================
-         stage('Docker Login') {
-             steps {
-                 withCredentials([
-                     usernamePassword(
-                         credentialsId: 'Docker-PAT',
-                         usernameVariable: 'DOCKER_USER',
-                         passwordVariable: 'DOCKER_PASS'
-                     )
-                 ]) {
-                     sh '''
-                       echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                     '''
-                 }
-             }
-         }
-
+        stage('Docker Login') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'Docker-PAT',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
+                    sh '''
+                      echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    '''
+                }
+            }
+        }
         // =========================
         // Build Backend Images
         // =========================
@@ -76,37 +68,45 @@ pipeline {
                   docker build -t ${BOOKING_IMAGE}:${IMAGE_TAG} -f Booking.API/Dockerfile .
                   docker build -t ${INVOICE_IMAGE}:${IMAGE_TAG} -f Invoice.API/Dockerfile .
                   docker build -t ${SITE_IMAGE}:${IMAGE_TAG} -f Site.API/Dockerfile .
-
+                  
                   docker rmi ${BOOKING_IMAGE}:latest || true
                   docker tag ${BOOKING_IMAGE}:${IMAGE_TAG} ${BOOKING_IMAGE}:latest
-
+                  
                   docker rmi ${INVOICE_IMAGE}:latest || true
                   docker tag ${INVOICE_IMAGE}:${IMAGE_TAG} ${INVOICE_IMAGE}:latest
-
+                  
                   docker rmi ${SITE_IMAGE}:latest || true
                   docker tag ${SITE_IMAGE}:${IMAGE_TAG} ${SITE_IMAGE}:latest
                 """
             }
         }
-
         // =========================
-        // Push Backend Images - SKIPPED FOR NOW (uncomment when ready)
+        // Push Backend Images with Retry
         // =========================
-         stage('Push Backend Images') {
-             steps {
-                 sh """
-                   docker push ${BOOKING_IMAGE}:${IMAGE_TAG}
-                   docker push ${BOOKING_IMAGE}:latest
-        
-                   docker push ${INVOICE_IMAGE}:${IMAGE_TAG}
-                   docker push ${INVOICE_IMAGE}:latest
-        
-                   docker push ${SITE_IMAGE}:${IMAGE_TAG}
-                   docker push ${SITE_IMAGE}:latest
-                 """
-             }
+        stage('Push Backend Images') {
+            steps {
+                script {
+                    def images = [
+                        ["${BOOKING_IMAGE}", "Booking"],
+                        ["${INVOICE_IMAGE}", "Invoice"],
+                        ["${SITE_IMAGE}", "Site"]
+                    ]
+                    
+                    for (img in images) {
+                        def imageName = img[0]
+                        def serviceName = img[1]
+                        
+                        retry(3) {
+                            echo "Pushing ${serviceName} service images (${imageName})..."
+                            sh """
+                              docker push ${imageName}:${IMAGE_TAG}
+                              docker push ${imageName}:latest
+                            """
+                        }
+                    }
+                }
+            }
         }
-
         // =========================
         // Deploy Swarm Stack
         // =========================
@@ -118,45 +118,70 @@ pipeline {
                 """
             }
         }
-
         // =========================
         // Swarm Health Check
         // =========================
         stage('Health Check') {
             steps {
-                sh '''
-                  echo "Waiting for services to stabilize..."
-                  sleep 40
-
-                  FAILED=$(docker stack services ${STACK_NAME} \
-                    --format '{{.Name}} {{.Replicas}}' | grep "0/" || true)
-
-                  if [ -n "$FAILED" ]; then
-                    echo "Some services are not running:"
-                    echo "$FAILED"
-                    exit 1
-                  else
-                    echo "All services are running"
-                  fi
-                '''
+                script {
+                    echo "Waiting for services to stabilize..."
+                    sleep 40
+                    
+                    def maxRetries = 5
+                    def retryDelay = 10
+                    def allHealthy = false
+                    
+                    for (int i = 0; i < maxRetries; i++) {
+                        def failed = sh(
+                            script: """
+                              docker stack services ${STACK_NAME} \
+                                --format '{{.Name}} {{.Replicas}}' | grep '0/' || true
+                            """,
+                            returnStdout: true
+                        ).trim()
+                        
+                        if (failed == '') {
+                            echo "All services are running"
+                            allHealthy = true
+                            break
+                        } else {
+                            echo "Attempt ${i + 1}/${maxRetries}: Some services not ready:"
+                            echo failed
+                            if (i < maxRetries - 1) {
+                                echo "Waiting ${retryDelay} seconds before retry..."
+                                sleep retryDelay
+                            }
+                        }
+                    }
+                    
+                    if (!allHealthy) {
+                        error("Services failed to become healthy after ${maxRetries} attempts")
+                    }
+                }
             }
         }
     }
-
     post {
         always {
             sh '''
-              # docker logout || true  # Not needed if not logging in
+              docker logout || true
             '''
         }
-
         success {
             echo "Build ${BUILD_NUMBER} deployed successfully to ${STACK_NAME}"
         }
-
         failure {
             echo "Build ${BUILD_NUMBER} failed"
+            sh '''
+              echo "=== Service Status ==="
+              docker stack services ${STACK_NAME} || true
+              echo ""
+              echo "=== Service Logs (last 50 lines) ==="
+              for service in $(docker stack services ${STACK_NAME} --format '{{.Name}}' 2>/dev/null || true); do
+                echo "--- Logs for $service ---"
+                docker service logs --tail 50 $service || true
+              done
+            '''
         }
     }
 }
-
