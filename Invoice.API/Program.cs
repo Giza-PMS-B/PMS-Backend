@@ -16,6 +16,7 @@ using SharedKernel.Logging;
 using Serilog;
 using Invoice.Application.EventHandlers;
 using Booking.Model.Shared;
+using DotNetEnv;
 
 namespace Invoice.API;
 
@@ -23,6 +24,8 @@ public class Program
 {
     public static void Main(string[] args)
     {
+        Env.Load(Path.Combine(Directory.GetCurrentDirectory(), "..", ".env"));
+
         var builder = WebApplication.CreateBuilder(args);
 
         builder.Services.AddCors(options =>

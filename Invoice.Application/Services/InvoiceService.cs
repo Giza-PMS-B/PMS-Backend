@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Threading.Tasks;
 using Invoice.Application.DTO;
 using Invoice.Model.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -31,7 +32,7 @@ public class InvoiceService
             TicketSerialNumber = GenerateSerial(),
             TicketId = createInvoiceDTO.TicketId
         };
-        var invoiceHtmlDocumentPath = await SaveInvoiceHtmlDoc(invoice.Id, createInvoiceDTO.HtmlDocument);
+        var invoiceHtmlDocumentPath = await ProcessInvoiceHtmlDocument(invoice);
         invoice.HtmlDocumentPath = invoiceHtmlDocumentPath;
 
         var ticket = await GetTicket(createInvoiceDTO.TicketId);
@@ -68,9 +69,9 @@ public class InvoiceService
         if (!ticketExists)
             throw new ValidationException($"Ticket with ID {ticketId} does not exist.");
     }
-    private decimal CalcAmountBeforeTax(decimal totalPrice, decimal Amount)
+    private decimal CalcAmountBeforeTax(decimal totalPrice, decimal TaxAmount)
     {
-        return (10 / 100) * totalPrice + totalPrice;
+        return (TaxAmount / 100) * totalPrice + totalPrice;
     }
     private async Task<Ticket> GetTicket(Guid ticketId)
     {
@@ -89,12 +90,90 @@ public class InvoiceService
         return random.Next(0, 1_000_000_000).ToString("D9");
     }
 
-
-    private async Task<string> SaveInvoiceHtmlDoc(Guid invoiceId, string htmlDocument)
+    private async Task<string> ProcessInvoiceHtmlDocument(Model.Entities.Invoice invoice)
     {
-        // Example URL with invoice ID appended
-        string url = $"https://5023/docs/invoices/{invoiceId}";
+        string document = CreateInvoiceHtmlDocument(invoice);
+        string url = await SaveInvoiceHtmlDoc(document, invoice.TicketSerialNumber);
         return url;
+    }
+    private string CreateInvoiceHtmlDocument(Model.Entities.Invoice invoice)
+    {
+        return $@"
+        <!DOCTYPE html>
+        <html lang=""en"">
+        <head>
+            <meta charset=""UTF-8"">
+            <title>Invoice {invoice.TicketSerialNumber}</title>
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    margin: 40px;
+                    color: #333;
+                }}
+                .invoice-box {{
+                    max-width: 800px;
+                    margin: auto;
+                    padding: 30px;
+                    border: 1px solid #eee;
+                    box-shadow: 0 0 10px rgba(0,0,0,.15);
+                }}
+                h1 {{
+                    text-align: center;
+                }}
+                table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 20px;
+                }}
+                th, td {{
+                    padding: 10px;
+                    border: 1px solid #ddd;
+                    text-align: left;
+                }}
+                .totals td {{
+                    font-weight: bold;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class=""invoice-box"">
+                <h1>Invoice</h1>
+
+                <p><strong>Invoice ID:</strong> {invoice.Id}</p>
+                <p><strong>Ticket Serial:</strong> {invoice.TicketSerialNumber}</p>
+                <p><strong>Ticket ID:</strong> {invoice.TicketId}</p>
+                <p><strong>Date:</strong> {DateTime.UtcNow:yyyy-MM-dd}</p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Total Before Tax</td>
+                            <td>{invoice.TotalAmountBeforeTax:C}</td>
+                        </tr>
+                        <tr>
+                            <td>Tax ({invoice.TaxAmount}%)</td>
+                            <td>{(invoice.TotalAmountAfterTax - invoice.TotalAmountBeforeTax):C}</td>
+                        </tr>
+                        <tr class=""totals"">
+                            <td>Total After Tax</td>
+                            <td>{invoice.TotalAmountAfterTax:C}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </body>
+        </html>";
+    }
+    private async Task<string> SaveInvoiceHtmlDoc(string htmlDocument, string fileName)
+    {
+        var uploader = new CloudinaryUploader();
+        return await uploader.UploadHtmlAsync(htmlDocument, fileName);
     }
 
 }
