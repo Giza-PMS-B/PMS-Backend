@@ -10,7 +10,7 @@ pipeline {
         // =========================
         // Docker Hub
         // =========================
-        DOCKER_REPO = "OmarEldamaty"
+        DOCKER_REPO = "omareldamaty"
 
         BOOKING_IMAGE = "${DOCKER_REPO}/pms-booking-service"
         INVOICE_IMAGE = "${DOCKER_REPO}/pms-invoice-service"
