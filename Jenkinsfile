@@ -160,6 +160,38 @@ pipeline {
                 }
             }
         }
+        // =========================
+        // Run Database Migrations
+        // =========================
+        stage('Run Database Migrations') {
+            steps {
+                script {
+                    echo "Waiting for SQL Server to be ready..."
+                    sleep 20
+                    
+                    // Check if SQL Server is accessible
+                    def sqlContainer = sh(
+                        script: """
+                          docker ps --filter 'name=${STACK_NAME}_sqlserver' --format '{{.ID}}' | head -n1
+                        """,
+                        returnStdout: true
+                    ).trim()
+                    
+                    if (!sqlContainer) {
+                        echo "⚠ Warning: SQL Server container not found. Migrations may fail."
+                    }
+                    
+                    echo "Running EF Core migrations for all services..."
+                    sh '''
+                        chmod +x run-migrations.sh
+                        export DB_PASSWORD="YourStrong@Passw0rd"
+                        export SQL_SERVER="sqlserver"
+                        export NETWORK="pms-network"
+                        ./run-migrations.sh
+                    '''
+                }
+            }
+        }
     }
     post {
         always {
