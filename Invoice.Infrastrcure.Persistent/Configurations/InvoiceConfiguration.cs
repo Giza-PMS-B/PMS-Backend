@@ -12,7 +12,7 @@ public class InvoiceConfiguration : IEntityTypeConfiguration<Model.Entities.Invo
 
         builder.HasKey(invoice => invoice.Id);
 
-        builder.Property(invoice => invoice.HtmlDocumentPath)
+        builder.Property(invoice => invoice.HtmlDocument)
             .IsRequired();
 
         builder.Property(invoice => invoice.TicketSerialNumber)
