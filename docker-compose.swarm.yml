@@ -1,0 +1,568 @@
+# Docker Swarm Production Deployment Configuration
+# Usage: docker stack deploy -c docker-compose.swarm.yml pms-backend
+# Prerequisites:
+#   1. Create external network: docker network create --driver overlay --attachable pms-network
+#   2. Create secret: echo "YourStrong@Passw0rd" | docker secret create sa_password -
+#   3. Build images: docker build -f Booking.API/Dockerfile -t wagihh/pms-booking-service:latest .
+#                    docker build -f Invoice.API/Dockerfile -t wagihh/pms-invoice-service:latest .
+#                    docker build -f Site.API/Dockerfile -t wagihh/pms-site-service:latest .
+#   4. Create SonarQube database (after SQL Server is running):
+#      docker exec -it <sqlserver-container> /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -C -Q "CREATE DATABASE sonar;"
+#
+# Network Note: This uses overlay network (required for Swarm), not bridge like docker-compose.
+# Service names (kafka, sqlserver) are used for DNS resolution - these match the original compose file.
+#
+# Additional Services:
+#   - Elasticsearch: http://localhost:9200 (Search and analytics engine for logs)
+#   - Kibana: http://localhost:5601 (Visualization dashboard - view all container logs)
+#   - Filebeat: Collects logs from all Docker containers and sends to Elasticsearch
+#   - SonarQube: http://localhost:9000 (Code quality analysis - default login: admin/admin) - COMMENTED OUT
+#
+# Log Monitoring Setup:
+#   1. Filebeat automatically collects logs from all containers via Docker socket
+#   2. Logs are sent to Elasticsearch and indexed by date (filebeat-YYYY.MM.DD)
+#   3. View logs in Kibana: http://localhost:5601
+#   4. In Kibana, go to "Discover" to see all container logs
+#   5. Filter by container name, service name, or log level
+
+version: '3.8'
+
+# Shared environment configuration for .NET services
+x-dotnet-environment: &dotnet-environment
+  ASPNETCORE_ENVIRONMENT: Production
+  ASPNETCORE_HTTP_PORTS: 8080
+  Kafka__BootstrapServers: kafka:9092
+  Kafka__Producer__Acks: all
+  Kafka__Producer__MessageTimeoutMs: "30000"
+  Kafka__Consumer__EnableAutoCommit: "false"
+  Kafka__Consumer__AutoOffsetReset: earliest
+
+# Shared service deployment configuration
+# Note: networks must be defined at service level, not in deploy section
+x-dotnet-service-deploy: &dotnet-service-deploy
+  restart_policy:
+    condition: any
+    delay: 5s
+    # max_attempts: 0 means unlimited in Docker Swarm
+    max_attempts: 0
+    window: 120s
+  update_config:
+    parallelism: 1
+    delay: 10s
+    failure_action: rollback
+    order: start-first
+
+services:
+  # Kafka UI - Optional monitoring tool
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - pms-network
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  # Zookeeper - Required for Kafka (single instance for Swarm)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    networks:
+      - pms-network
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+      update_config:
+        parallelism: 1
+        delay: 30s
+        failure_action: rollback
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Kafka Message Broker (single instance for Swarm)
+  # Note: depends_on is ignored in Swarm, rely on health checks and restart policies
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    hostname: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+    networks:
+      - pms-network
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+      update_config:
+        parallelism: 1
+        delay: 30s
+        failure_action: rollback
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 15s
+      timeout: 15s
+      retries: 10
+      start_period: 60s
+
+  # SQL Server Database
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    hostname: sqlserver
+    ports:
+      - "1433:1433"
+    networks:
+      - pms-network
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD_FILE: /run/secrets/sa_password
+      MSSQL_PID: "Developer"
+      MSSQL_MEMORY_LIMIT_MB: "1536"
+    secrets:
+      - sa_password
+    volumes:
+      - sql_data:/var/opt/mssql
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+      update_config:
+        parallelism: 1
+        delay: 30s
+        failure_action: rollback
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1.5G
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$(cat /run/secrets/sa_password)\" -C -Q \"SELECT 1\" || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  # Booking Service
+  booking-service:
+    image: omareldamaty/pms-booking-service:${IMAGE_TAG:-latest}
+    networks:
+      - pms-network
+    ports:
+      - "5001:8080"
+    # Wait for Kafka and SQL Server DNS to be resolvable before starting
+    entrypoint: >
+      sh -c "
+      echo 'Waiting for Kafka and SQL Server DNS resolution...';
+      i=0;
+      while [ $$i -lt 30 ]; do
+        if getent hosts kafka > /dev/null 2>&1 && getent hosts sqlserver > /dev/null 2>&1; then
+          echo 'Kafka and SQL Server DNS resolved, starting application...';
+          break;
+        fi;
+        i=$$((i+1));
+        echo \"Attempt $$i/30: Waiting for dependencies (Kafka/SQL Server), waiting 2s...\";
+        sleep 2;
+      done;
+      exec dotnet Booking.API.dll
+      "
+    environment:
+      <<: *dotnet-environment
+      Kafka__ClientId: BookingService
+      Kafka__Consumer__GroupId: BookingServiceGroup
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=PMS_Booking;User Id=sa;Password=YourStrong@Passw0rd;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True;"
+    secrets:
+      - source: sa_password
+        target: sa_password
+        uid: '1000'
+        gid: '1000'
+        mode: 0400
+    # Health check - TCP port check (same as Site service which is working)
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8080' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+    deploy:
+      <<: *dotnet-service-deploy
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  # Invoice Service
+  invoice-service:
+    image: omareldamaty/pms-invoice-service:${IMAGE_TAG:-latest}
+    networks:
+      - pms-network
+    ports:
+      - "5002:8080"
+    # Wait for Kafka and SQL Server DNS to be resolvable before starting
+    entrypoint: >
+      sh -c "
+      echo 'Waiting for Kafka and SQL Server DNS resolution...';
+      i=0;
+      while [ $$i -lt 30 ]; do
+        if getent hosts kafka > /dev/null 2>&1 && getent hosts sqlserver > /dev/null 2>&1; then
+          echo 'Kafka and SQL Server DNS resolved, starting application...';
+          break;
+        fi;
+        i=$$((i+1));
+        echo \"Attempt $$i/30: Waiting for dependencies (Kafka/SQL Server), waiting 2s...\";
+        sleep 2;
+      done;
+      exec dotnet Invoice.API.dll
+      "
+    environment:
+      <<: *dotnet-environment
+      Kafka__ClientId: InvoiceService
+      Kafka__Consumer__GroupId: InvoiceServiceGroup
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=PMS_Invoice;User Id=sa;Password=YourStrong@Passw0rd;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True;"
+    secrets:
+      - source: sa_password
+        target: sa_password
+        uid: '1000'
+        gid: '1000'
+        mode: 0400
+    # Health check - TCP port check (same as Site service which is working)
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8080' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+    deploy:
+      <<: *dotnet-service-deploy
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  # Site Service
+  site-service:
+    image: omareldamaty/pms-site-service:${IMAGE_TAG:-latest}
+    networks:
+      - pms-network
+    ports:
+      - "5003:8080"
+    # Wait for Kafka and SQL Server DNS to be resolvable before starting
+    entrypoint: >
+      sh -c "
+      echo 'Waiting for Kafka and SQL Server DNS resolution...';
+      i=0;
+      while [ $$i -lt 30 ]; do
+        if getent hosts kafka > /dev/null 2>&1 && getent hosts sqlserver > /dev/null 2>&1; then
+          echo 'Kafka and SQL Server DNS resolved, starting application...';
+          break;
+        fi;
+        i=$$((i+1));
+        echo \"Attempt $$i/30: Waiting for dependencies (Kafka/SQL Server), waiting 2s...\";
+        sleep 2;
+      done;
+      exec dotnet Site.API.dll
+      "
+    environment:
+      <<: *dotnet-environment
+      Kafka__ClientId: SiteService
+      Kafka__Consumer__GroupId: SiteServiceGroup
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=PMS_Site;User Id=sa;Password=YourStrong@Passw0rd;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True;"
+    secrets:
+      - source: sa_password
+        target: sa_password
+        uid: '1000'
+        gid: '1000'
+        mode: 0400
+    # Health check - TCP port check (no external tools needed)
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8080' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+    deploy:
+      <<: *dotnet-service-deploy
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  # Elasticsearch - Required for Kibana
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    hostname: elasticsearch
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms256m -Xmx512m"
+      - bootstrap.memory_lock=true
+    networks:
+      - pms-network
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+      update_config:
+        parallelism: 1
+        delay: 30s
+        failure_action: rollback
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=1s || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Kibana - Visualization for Elasticsearch
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    hostname: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - SERVER_NAME=kibana
+      - SERVER_HOST=0.0.0.0
+    networks:
+      - pms-network
+    volumes:
+      - kibana_data:/usr/share/kibana/data
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+      update_config:
+        parallelism: 1
+        delay: 30s
+        failure_action: rollback
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    # Note: Kibana requires Elasticsearch to be running first
+
+  # Filebeat - Log shipper to collect container logs and send to Elasticsearch
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.11.0
+    hostname: filebeat
+    user: root
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - filebeat_data:/usr/share/filebeat/data
+    configs:
+      - source: filebeat_config
+        target: /usr/share/filebeat/filebeat.yml
+    networks:
+      - pms-network
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - KIBANA_HOST=http://kibana:5601
+    deploy:
+      mode: global  # Run on every node to collect logs from all containers
+      restart_policy:
+        condition: on-failure
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    command:
+      - filebeat
+      - -e
+      - -strict.perms=false
+      - -c
+      - /usr/share/filebeat/filebeat.yml
+
+  # SonarQube - Code Quality Analysis (COMMENTED OUT)
+  # sonarqube:
+  #   image: sonarqube:community
+  #   hostname: sonarqube
+  #   ports:
+  #     - "9000:9000"
+  #   environment:
+  #     - SONAR_JDBC_URL=jdbc:sqlserver://sqlserver:1433;databaseName=sonar;encrypt=true;trustServerCertificate=true
+  #     - SONAR_JDBC_USERNAME=sa
+  #     - SONAR_JDBC_PASSWORD=YourStrong@Passw0rd
+  #     - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+  #   networks:
+  #     - pms-network
+  #   volumes:
+  #     - sonarqube_data:/opt/sonarqube/data
+  #     - sonarqube_extensions:/opt/sonarqube/extensions
+  #     - sonarqube_logs:/opt/sonarqube/logs
+  #   deploy:
+  #     replicas: 1
+  #     placement:
+  #       constraints:
+  #         - node.role == manager
+  #     restart_policy:
+  #       condition: on-failure
+  #     update_config:
+  #       parallelism: 1
+  #       delay: 30s
+  #       failure_action: rollback
+  #     resources:
+  #       limits:
+  #         cpus: '0.75'
+  #         memory: 512M
+  #       reservations:
+  #         cpus: '0.5'
+  #         memory: 256M
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "curl -f http://localhost:9000/api/system/status || exit 1"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 10
+  #     start_period: 180s
+  #   # Note: SonarQube requires the 'sonar' database to be created in SQL Server first
+  #   # Run: docker exec -it <sqlserver-container> /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -C -Q "CREATE DATABASE sonar;"
+
+networks:
+  pms-network:
+    external: true
+    name: pms-network
+
+volumes:
+  zookeeper_data:
+    name: pms_zookeeper_data
+  zookeeper_log:
+    name: pms_zookeeper_log
+  kafka_data:
+    name: pms_kafka_data
+  sql_data:
+    name: pms_sql_data
+  elasticsearch_data:
+    name: pms_elasticsearch_data
+  kibana_data:
+    name: pms_kibana_data
+  filebeat_data:
+    name: pms_filebeat_data
+  # sonarqube_data:
+  #   name: pms_sonarqube_data
+  # sonarqube_extensions:
+  #   name: pms_sonarqube_extensions
+  # sonarqube_logs:
+  #   name: pms_sonarqube_logs
+
+secrets:
+  sa_password:
+    external: true
+    name: sa_password
+
+configs:
+  filebeat_config:
+    external: true
+    name: filebeat_config
+
