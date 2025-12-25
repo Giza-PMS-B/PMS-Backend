@@ -6,7 +6,7 @@
 #   3. Build images: docker build -f Booking.API/Dockerfile -t wagihh/pms-booking-service:latest .
 #                    docker build -f Invoice.API/Dockerfile -t wagihh/pms-invoice-service:latest .
 #                    docker build -f Site.API/Dockerfile -t wagihh/pms-site-service:latest .
-#   4. Create SonarQube database (after SQL Server is running) - DISABLED:
+#   4. Create SonarQube database (after SQL Server is running):
 #      docker exec -it <sqlserver-container> /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -C -Q "CREATE DATABASE sonar;"
 #
 # Network Note: This uses overlay network (required for Swarm), not bridge like docker-compose.
@@ -16,7 +16,7 @@
 #   - Elasticsearch: http://localhost:9200 (Search and analytics engine for logs)
 #   - Kibana: http://localhost:5601 (Visualization dashboard - view all container logs)
 #   - Filebeat: Collects logs from all Docker containers and sends to Elasticsearch
-#   - SonarQube: http://localhost:9000 (Code quality analysis - default login: admin/admin) - DISABLED
+#   - SonarQube: http://localhost:9000 (Code quality analysis - default login: admin/admin) - COMMENTED OUT
 #
 # Log Monitoring Setup:
 #   1. Filebeat automatically collects logs from all containers via Docker socket
@@ -485,49 +485,49 @@ services:
       - -c
       - /usr/share/filebeat/filebeat.yml
 
-  # SonarQube - Code Quality Analysis
-  sonarqube:
-    image: sonarqube:community
-    hostname: sonarqube
-    ports:
-      - "9000:9000"
-    environment:
-      - SONAR_JDBC_URL=jdbc:sqlserver://sqlserver:1433;databaseName=sonar;encrypt=true;trustServerCertificate=true
-      - SONAR_JDBC_USERNAME=sa
-      - SONAR_JDBC_PASSWORD=YourStrong@Passw0rd
-      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
-    networks:
-      - pms-network
-    volumes:
-      - sonarqube_data:/opt/sonarqube/data
-      - sonarqube_extensions:/opt/sonarqube/extensions
-      - sonarqube_logs:/opt/sonarqube/logs
-    deploy:
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      restart_policy:
-        condition: on-failure
-      update_config:
-        parallelism: 1
-        delay: 30s
-        failure_action: rollback
-      resources:
-        limits:
-          cpus: '0.75'
-          memory: 512M
-        reservations:
-          cpus: '0.5'
-          memory: 256M
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9000/api/system/status || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 180s
-    # Note: SonarQube requires the 'sonar' database to be created in SQL Server first
-    # Run: docker exec -it <sqlserver-container> /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -C -Q "CREATE DATABASE sonar;"
+  # SonarQube - Code Quality Analysis (COMMENTED OUT)
+  # sonarqube:
+  #   image: sonarqube:community
+  #   hostname: sonarqube
+  #   ports:
+  #     - "9000:9000"
+  #   environment:
+  #     - SONAR_JDBC_URL=jdbc:sqlserver://sqlserver:1433;databaseName=sonar;encrypt=true;trustServerCertificate=true
+  #     - SONAR_JDBC_USERNAME=sa
+  #     - SONAR_JDBC_PASSWORD=YourStrong@Passw0rd
+  #     - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+  #   networks:
+  #     - pms-network
+  #   volumes:
+  #     - sonarqube_data:/opt/sonarqube/data
+  #     - sonarqube_extensions:/opt/sonarqube/extensions
+  #     - sonarqube_logs:/opt/sonarqube/logs
+  #   deploy:
+  #     replicas: 1
+  #     placement:
+  #       constraints:
+  #         - node.role == manager
+  #     restart_policy:
+  #       condition: on-failure
+  #     update_config:
+  #       parallelism: 1
+  #       delay: 30s
+  #       failure_action: rollback
+  #     resources:
+  #       limits:
+  #         cpus: '0.75'
+  #         memory: 512M
+  #       reservations:
+  #         cpus: '0.5'
+  #         memory: 256M
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "curl -f http://localhost:9000/api/system/status || exit 1"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 10
+  #     start_period: 180s
+  #   # Note: SonarQube requires the 'sonar' database to be created in SQL Server first
+  #   # Run: docker exec -it <sqlserver-container> /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -C -Q "CREATE DATABASE sonar;"
 
 networks:
   pms-network:
