@@ -125,7 +125,7 @@ pipeline {
             steps {
                 script {
                     echo "Waiting for services to stabilize..."
-                    sleep 40
+                    sleep 240
                     
                     def maxRetries = 5
                     def retryDelay = 10
