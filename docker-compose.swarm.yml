@@ -6,7 +6,7 @@
 #   3. Build images: docker build -f Booking.API/Dockerfile -t wagihh/pms-booking-service:latest .
 #                    docker build -f Invoice.API/Dockerfile -t wagihh/pms-invoice-service:latest .
 #                    docker build -f Site.API/Dockerfile -t wagihh/pms-site-service:latest .
-#   4. Create SonarQube database (after SQL Server is running):
+#   4. Create SonarQube database (after SQL Server is running) - DISABLED:
 #      docker exec -it <sqlserver-container> /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -C -Q "CREATE DATABASE sonar;"
 #
 # Network Note: This uses overlay network (required for Swarm), not bridge like docker-compose.
@@ -16,7 +16,7 @@
 #   - Elasticsearch: http://localhost:9200 (Search and analytics engine for logs)
 #   - Kibana: http://localhost:5601 (Visualization dashboard - view all container logs)
 #   - Filebeat: Collects logs from all Docker containers and sends to Elasticsearch
-#   - SonarQube: http://localhost:9000 (Code quality analysis - default login: admin/admin)
+#   - SonarQube: http://localhost:9000 (Code quality analysis - default login: admin/admin) - DISABLED
 #
 # Log Monitoring Setup:
 #   1. Filebeat automatically collects logs from all containers via Docker socket
@@ -71,6 +71,13 @@ services:
           - node.role == manager
       restart_policy:
         condition: on-failure
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
 
   # Zookeeper - Required for Kafka (single instance for Swarm)
   zookeeper:
@@ -94,6 +101,13 @@ services:
         parallelism: 1
         delay: 30s
         failure_action: rollback
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "2181"]
       interval: 10s
@@ -132,6 +146,13 @@ services:
         parallelism: 1
         delay: 30s
         failure_action: rollback
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
     healthcheck:
       test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
       interval: 15s
@@ -151,6 +172,7 @@ services:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD_FILE: /run/secrets/sa_password
       MSSQL_PID: "Developer"
+      MSSQL_MEMORY_LIMIT_MB: "1024"
     secrets:
       - sa_password
     volumes:
@@ -166,6 +188,13 @@ services:
         parallelism: 1
         delay: 30s
         failure_action: rollback
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1.25G
+        reservations:
+          cpus: '0.75'
+          memory: 1G
     healthcheck:
       test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$(cat /run/secrets/sa_password)\" -C -Q \"SELECT 1\" || exit 1"]
       interval: 15s
@@ -219,11 +248,11 @@ services:
       replicas: 2
       resources:
         limits:
-          cpus: '1'
-          memory: 512M
-        reservations:
           cpus: '0.5'
           memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
 
   # Invoice Service
   invoice-service:
@@ -271,11 +300,11 @@ services:
       replicas: 2
       resources:
         limits:
-          cpus: '1'
-          memory: 512M
-        reservations:
           cpus: '0.5'
           memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
 
   # Site Service
   site-service:
@@ -323,11 +352,11 @@ services:
       replicas: 2
       resources:
         limits:
-          cpus: '1'
-          memory: 512M
-        reservations:
           cpus: '0.5'
           memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
 
   # Elasticsearch - Required for Kibana
   elasticsearch:
@@ -339,7 +368,7 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "ES_JAVA_OPTS=-Xms256m -Xmx512m"
       - bootstrap.memory_lock=true
     networks:
       - pms-network
@@ -365,11 +394,11 @@ services:
         failure_action: rollback
       resources:
         limits:
-          cpus: '2'
-          memory: 1G
-        reservations:
           cpus: '1'
           memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=1s || exit 1"]
       interval: 30s
@@ -404,11 +433,11 @@ services:
         failure_action: rollback
       resources:
         limits:
-          cpus: '1'
-          memory: 1G
-        reservations:
           cpus: '0.5'
           memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
       interval: 30s
@@ -426,7 +455,9 @@ services:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - filebeat_data:/usr/share/filebeat/data
-      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+    configs:
+      - source: filebeat_config
+        target: /usr/share/filebeat/filebeat.yml
     networks:
       - pms-network
     environment:
@@ -484,11 +515,11 @@ services:
         failure_action: rollback
       resources:
         limits:
-          cpus: '2'
-          memory: 2G
+          cpus: '0.75'
+          memory: 512M
         reservations:
-          cpus: '1'
-          memory: 1G
+          cpus: '0.5'
+          memory: 256M
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9000/api/system/status || exit 1"]
       interval: 30s
@@ -518,15 +549,20 @@ volumes:
     name: pms_kibana_data
   filebeat_data:
     name: pms_filebeat_data
-  sonarqube_data:
-    name: pms_sonarqube_data
-  sonarqube_extensions:
-    name: pms_sonarqube_extensions
-  sonarqube_logs:
-    name: pms_sonarqube_logs
+  # sonarqube_data:
+  #   name: pms_sonarqube_data
+  # sonarqube_extensions:
+  #   name: pms_sonarqube_extensions
+  # sonarqube_logs:
+  #   name: pms_sonarqube_logs
 
 secrets:
   sa_password:
     external: true
     name: sa_password
+
+configs:
+  filebeat_config:
+    external: true
+    name: filebeat_config
 
