@@ -32,11 +32,13 @@ run_migrations_for_service() {
     
     local connection_string="Server=$SQL_SERVER;Database=$db_name;User Id=sa;Password=$DB_PASSWORD;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True;"
     
+    # Restore packages first if needed
+    dotnet restore "$startup_project" || true
+    
     dotnet ef database update \
         --project "$migration_project" \
         --startup-project "$startup_project" \
-        --connection "$connection_string" \
-        --no-build
+        --connection "$connection_string"
     
     if [ $? -eq 0 ]; then
         echo "✅ Migrations completed for $startup_project"
@@ -63,7 +65,7 @@ if [ -n "$JENKINS_HOME" ] || [ ! -t 0 ] || ! command -v dotnet &> /dev/null || !
     fi
     
     # Run migrations in Docker container
-    docker run --rm \
+        docker run --rm \
         --network "$NETWORK" \
         -v "$(pwd):/workspace" \
         -w /workspace \
@@ -73,6 +75,9 @@ if [ -n "$JENKINS_HOME" ] || [ ! -t 0 ] || ! command -v dotnet &> /dev/null || !
             echo 'Installing EF Core tools...'
             dotnet tool install --global dotnet-ef --version 8.0.0 || dotnet tool update --global dotnet-ef --version 8.0.0
             export PATH=\"\$PATH:/root/.dotnet/tools\"
+            
+            echo 'Restoring NuGet packages...'
+            dotnet restore PMS.sln || echo 'Warning: Some packages may have failed to restore'
             
             # Run migrations for each service
             failed_services=()
@@ -85,8 +90,7 @@ if [ -n "$JENKINS_HOME" ] || [ ! -t 0 ] || ! command -v dotnet &> /dev/null || !
             if dotnet ef database update \
                 --project Booking.Infrastrcure.Persistent \
                 --startup-project Booking.API \
-                --connection 'Server=$SQL_SERVER;Database=PMS_Booking;User Id=sa;Password=$DB_PASSWORD;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True;' \
-                --no-build; then
+                --connection 'Server=$SQL_SERVER;Database=PMS_Booking;User Id=sa;Password=$DB_PASSWORD;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True;'; then
                 echo '✅ Booking migrations completed'
             else
                 echo '❌ Booking migrations failed'
@@ -101,8 +105,7 @@ if [ -n "$JENKINS_HOME" ] || [ ! -t 0 ] || ! command -v dotnet &> /dev/null || !
             if dotnet ef database update \
                 --project Invoice.Infrastrcure.Persistent \
                 --startup-project Invoice.API \
-                --connection 'Server=$SQL_SERVER;Database=PMS_Invoice;User Id=sa;Password=$DB_PASSWORD;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True;' \
-                --no-build; then
+                --connection 'Server=$SQL_SERVER;Database=PMS_Invoice;User Id=sa;Password=$DB_PASSWORD;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True;'; then
                 echo '✅ Invoice migrations completed'
             else
                 echo '❌ Invoice migrations failed'
@@ -117,8 +120,7 @@ if [ -n "$JENKINS_HOME" ] || [ ! -t 0 ] || ! command -v dotnet &> /dev/null || !
             if dotnet ef database update \
                 --project Site.Infrastrcure.Persistent \
                 --startup-project Site.API \
-                --connection 'Server=$SQL_SERVER;Database=PMS_Site;User Id=sa;Password=$DB_PASSWORD;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True;' \
-                --no-build; then
+                --connection 'Server=$SQL_SERVER;Database=PMS_Site;User Id=sa;Password=$DB_PASSWORD;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True;'; then
                 echo '✅ Site migrations completed'
             else
                 echo '❌ Site migrations failed'
