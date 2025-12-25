@@ -6,24 +6,9 @@
 #   3. Build images: docker build -f Booking.API/Dockerfile -t wagihh/pms-booking-service:latest .
 #                    docker build -f Invoice.API/Dockerfile -t wagihh/pms-invoice-service:latest .
 #                    docker build -f Site.API/Dockerfile -t wagihh/pms-site-service:latest .
-#   4. Create SonarQube database (after SQL Server is running):
-#      docker exec -it <sqlserver-container> /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -C -Q "CREATE DATABASE sonar;"
 #
 # Network Note: This uses overlay network (required for Swarm), not bridge like docker-compose.
 # Service names (kafka, sqlserver) are used for DNS resolution - these match the original compose file.
-#
-# Additional Services:
-#   - Elasticsearch: http://localhost:9200 (Search and analytics engine for logs)
-#   - Kibana: http://localhost:5601 (Visualization dashboard - view all container logs)
-#   - Filebeat: Collects logs from all Docker containers and sends to Elasticsearch
-#   - SonarQube: http://localhost:9000 (Code quality analysis - default login: admin/admin)
-#
-# Log Monitoring Setup:
-#   1. Filebeat automatically collects logs from all containers via Docker socket
-#   2. Logs are sent to Elasticsearch and indexed by date (filebeat-YYYY.MM.DD)
-#   3. View logs in Kibana: http://localhost:5601
-#   4. In Kibana, go to "Discover" to see all container logs
-#   5. Filter by container name, service name, or log level
 
 version: '3.8'
 
@@ -329,175 +314,6 @@ services:
           cpus: '0.5'
           memory: 256M
 
-  # Elasticsearch - Required for Kibana
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
-    hostname: elasticsearch
-    ports:
-      - "9200:9200"
-      - "9300:9300"
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-      - bootstrap.memory_lock=true
-    networks:
-      - pms-network
-    volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-      nofile:
-        soft: 65536
-        hard: 65536
-    deploy:
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      restart_policy:
-        condition: on-failure
-      update_config:
-        parallelism: 1
-        delay: 30s
-        failure_action: rollback
-      resources:
-        limits:
-          cpus: '2'
-          memory: 1G
-        reservations:
-          cpus: '1'
-          memory: 512M
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=1s || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-
-  # Kibana - Visualization for Elasticsearch
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.11.0
-    hostname: kibana
-    ports:
-      - "5601:5601"
-    environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - SERVER_NAME=kibana
-      - SERVER_HOST=0.0.0.0
-    networks:
-      - pms-network
-    volumes:
-      - kibana_data:/usr/share/kibana/data
-    deploy:
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      restart_policy:
-        condition: on-failure
-      update_config:
-        parallelism: 1
-        delay: 30s
-        failure_action: rollback
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 120s
-    # Note: Kibana requires Elasticsearch to be running first
-
-  # Filebeat - Log shipper to collect container logs and send to Elasticsearch
-  filebeat:
-    image: docker.elastic.co/beats/filebeat:8.11.0
-    hostname: filebeat
-    user: root
-    volumes:
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - filebeat_data:/usr/share/filebeat/data
-      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
-    networks:
-      - pms-network
-    environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - KIBANA_HOST=http://kibana:5601
-    deploy:
-      mode: global  # Run on every node to collect logs from all containers
-      restart_policy:
-        condition: on-failure
-      update_config:
-        parallelism: 1
-        delay: 10s
-        failure_action: rollback
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 512M
-        reservations:
-          cpus: '0.25'
-          memory: 256M
-    command:
-      - filebeat
-      - -e
-      - -strict.perms=false
-      - -c
-      - /usr/share/filebeat/filebeat.yml
-
-  # SonarQube - Code Quality Analysis
-  sonarqube:
-    image: sonarqube:community
-    hostname: sonarqube
-    ports:
-      - "9000:9000"
-    environment:
-      - SONAR_JDBC_URL=jdbc:sqlserver://sqlserver:1433;databaseName=sonar;encrypt=true;trustServerCertificate=true
-      - SONAR_JDBC_USERNAME=sa
-      - SONAR_JDBC_PASSWORD=YourStrong@Passw0rd
-      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
-    networks:
-      - pms-network
-    volumes:
-      - sonarqube_data:/opt/sonarqube/data
-      - sonarqube_extensions:/opt/sonarqube/extensions
-      - sonarqube_logs:/opt/sonarqube/logs
-    deploy:
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      restart_policy:
-        condition: on-failure
-      update_config:
-        parallelism: 1
-        delay: 30s
-        failure_action: rollback
-      resources:
-        limits:
-          cpus: '2'
-          memory: 2G
-        reservations:
-          cpus: '1'
-          memory: 1G
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9000/api/system/status || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 180s
-    # Note: SonarQube requires the 'sonar' database to be created in SQL Server first
-    # Run: docker exec -it <sqlserver-container> /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -C -Q "CREATE DATABASE sonar;"
-
 networks:
   pms-network:
     external: true
@@ -512,21 +328,10 @@ volumes:
     name: pms_kafka_data
   sql_data:
     name: pms_sql_data
-  elasticsearch_data:
-    name: pms_elasticsearch_data
-  kibana_data:
-    name: pms_kibana_data
-  filebeat_data:
-    name: pms_filebeat_data
-  sonarqube_data:
-    name: pms_sonarqube_data
-  sonarqube_extensions:
-    name: pms_sonarqube_extensions
-  sonarqube_logs:
-    name: pms_sonarqube_logs
 
 secrets:
   sa_password:
     external: true
     name: sa_password
+
 
