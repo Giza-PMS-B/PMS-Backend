@@ -22,7 +22,7 @@ pipeline {
             steps {
                 git(
                     url: 'https://github.com/Giza-PMS-B/PMS-Backend',
-                    branch: 'devops',
+                    branch: 'main',
                     credentialsId: 'swarm-id'
                 )
             }
