@@ -16,6 +16,7 @@ using SharedKernel.Logging;
 using Serilog;
 using Invoice.Application.EventHandlers;
 using Booking.Model.Shared;
+using DotNetEnv;
 
 namespace Invoice.API;
 
@@ -24,6 +25,9 @@ public class Program
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+
+        // Add environment variables to configuration
+        builder.Configuration.AddEnvironmentVariables();
 
         builder.Services.AddCors(options =>
         {
@@ -91,6 +95,13 @@ public class Program
 
 
         var app = builder.Build();
+
+        // 🔹 Apply migrations automatically
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Database.Migrate();
+        }
 
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())

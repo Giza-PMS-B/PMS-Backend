@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace Invoice.Model.Entities;
 
@@ -13,5 +14,6 @@ public class Ticket
     public decimal TotalPrice { get; set; }
 
     // Navigation property
+    [JsonIgnore]
     public Invoice Invoice { get; set; }
 }

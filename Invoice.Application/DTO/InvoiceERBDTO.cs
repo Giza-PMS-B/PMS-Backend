@@ -6,7 +6,7 @@ public class InvoiceERBDTO
 {
     public Guid InvoiceId { get; set; }
     public Guid TicketId { get; set; }
-    public Guid TicketSerial { get; set; }
+    public string TicketSerial { get; set; }
     public DateTime BookingFrom { get; set; }
     public DateTime BookingTo { get; set; }
     public int NumOfHours { get; set; }
@@ -14,6 +14,6 @@ public class InvoiceERBDTO
     public decimal TotalAmountBeforeTax { get; set; }
     public decimal TotalAmountAfterTax { get; set; }
     public string TicketSerialNumber { get; set; }
-    public string InvoiceDocPath { get; set; }
+    public string InvoiceHTMLDoc { get; set; }
 
 }

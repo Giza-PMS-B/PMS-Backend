@@ -5,7 +5,7 @@ namespace Invoice.Model.Entities;
 public class Invoice
 {
     public Guid Id { get; set; }
-    public string HtmlDocumentPath { get; set; }
+    public string HtmlDocument { get; set; }
     public decimal TaxAmount { get; set; } = 10;
     public decimal TotalAmountBeforeTax { get; set; }
     public decimal TotalAmountAfterTax { get; set; }
