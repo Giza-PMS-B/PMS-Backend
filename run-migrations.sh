@@ -1,195 +1,202 @@
 #!/bin/bash
-# Script to run EF Core migrations for all services (Booking, Invoice, Site)
-# Can be run from local machine (if .NET SDK available) or using Docker container
-# For Jenkins CI/CD: runs non-interactively using Docker
 
-echo "========================================="
-echo "Running EF Core Migrations for All Services"
-echo "========================================="
+# Script to create PMS databases and trigger migrations
+# Usage: ./create-databases.sh
+
+set -e
+
+echo "========================================"
+echo "PMS Database Creation & Migration"
+echo "========================================"
 echo ""
 
-DB_PASSWORD="${DB_PASSWORD:-YourStrong@Passw0rd}"
-SQL_SERVER="${SQL_SERVER:-sqlserver}"
-NETWORK="${NETWORK:-pms-network}"
+# Configuration
+SA_PASSWORD="YourStrong@Passw0rd"
+DATABASES=("PMS_Booking" "PMS_Invoice" "PMS_Site")
+SQLSERVER_CONTAINER=$(docker ps -qf "name=sqlserver" | head -1)
 
-# Service configurations: (MigrationProject, StartupProject, DatabaseName)
-declare -a SERVICES=(
-    "Booking.Infrastrcure.Persistent:Booking.API:PMS_Booking"
-    "Invoice.Infrastrcure.Persistent:Invoice.API:PMS_Invoice"
-    "Site.Infrastrcure.Persistent:Site.API:PMS_Site"
-)
+# Colors
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
 
-# Function to run migrations for a single service
-run_migrations_for_service() {
-    local migration_project=$1
-    local startup_project=$2
-    local db_name=$3
-    
-    echo "----------------------------------------"
-    echo "Running migrations for: $startup_project"
-    echo "Database: $db_name"
-    echo "----------------------------------------"
-    
-    local connection_string="Server=$SQL_SERVER;Database=$db_name;User Id=sa;Password=$DB_PASSWORD;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True;"
-    
-    # Restore packages first if needed
-    dotnet restore "$startup_project" || true
-    
-    dotnet ef database update \
-        --project "$migration_project" \
-        --startup-project "$startup_project" \
-        --connection "$connection_string"
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ Migrations completed for $startup_project"
-        return 0
-    else
-        echo "❌ Migrations failed for $startup_project"
-        return 1
-    fi
-}
-
-# Check if running in Docker (for Jenkins) or locally
-if [ -n "$JENKINS_HOME" ] || [ ! -t 0 ] || ! command -v dotnet &> /dev/null || ! dotnet --version &> /dev/null; then
-    # Running in Jenkins or no local SDK - use Docker container
-    echo "Running migrations using Docker SDK container..."
-    echo "Network: $NETWORK"
-    echo "SQL Server: $SQL_SERVER"
-    echo ""
-    
-    # Check if network exists
-    if ! docker network inspect "$NETWORK" &> /dev/null; then
-        echo "❌ Network '$NETWORK' does not exist. Please create it first:"
-        echo "   docker network create --driver overlay --attachable $NETWORK"
-        exit 1
-    fi
-    
-    # Run migrations in Docker container
-        docker run --rm \
-        --network "$NETWORK" \
-        -v "$(pwd):/workspace" \
-        -w /workspace \
-        mcr.microsoft.com/dotnet/sdk:8.0 \
-        bash -c "
-            set -e
-            echo 'Installing EF Core tools...'
-            dotnet tool install --global dotnet-ef --version 8.0.0 || dotnet tool update --global dotnet-ef --version 8.0.0
-            export PATH=\"\$PATH:/root/.dotnet/tools\"
-            
-            echo 'Restoring NuGet packages...'
-            dotnet restore PMS.sln || echo 'Warning: Some packages may have failed to restore'
-            
-            # Run migrations for each service
-            failed_services=()
-            
-            # Booking Service
-            echo ''
-            echo '========================================='
-            echo 'Running migrations for Booking Service'
-            echo '========================================='
-            if dotnet ef database update \
-                --project Booking.Infrastrcure.Persistent \
-                --startup-project Booking.API \
-                --connection 'Server=$SQL_SERVER;Database=PMS_Booking;User Id=sa;Password=$DB_PASSWORD;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True;'; then
-                echo '✅ Booking migrations completed'
-            else
-                echo '❌ Booking migrations failed'
-                failed_services+=('Booking')
-            fi
-            
-            # Invoice Service
-            echo ''
-            echo '========================================='
-            echo 'Running migrations for Invoice Service'
-            echo '========================================='
-            if dotnet ef database update \
-                --project Invoice.Infrastrcure.Persistent \
-                --startup-project Invoice.API \
-                --connection 'Server=$SQL_SERVER;Database=PMS_Invoice;User Id=sa;Password=$DB_PASSWORD;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True;'; then
-                echo '✅ Invoice migrations completed'
-            else
-                echo '❌ Invoice migrations failed'
-                failed_services+=('Invoice')
-            fi
-            
-            # Site Service
-            echo ''
-            echo '========================================='
-            echo 'Running migrations for Site Service'
-            echo '========================================='
-            if dotnet ef database update \
-                --project Site.Infrastrcure.Persistent \
-                --startup-project Site.API \
-                --connection 'Server=$SQL_SERVER;Database=PMS_Site;User Id=sa;Password=$DB_PASSWORD;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True;'; then
-                echo '✅ Site migrations completed'
-            else
-                echo '❌ Site migrations failed'
-                failed_services+=('Site')
-            fi
-            
-            # Report results
-            echo ''
-            echo '========================================='
-            echo 'Migration Summary'
-            echo '========================================='
-            if [ \${#failed_services[@]} -eq 0 ]; then
-                echo '✅ All migrations completed successfully!'
-                exit 0
-            else
-                echo '❌ Some migrations failed:'
-                printf '   - %s\n' \"\${failed_services[@]}\"
-                exit 1
-            fi
-        "
-    
-    MIGRATION_EXIT_CODE=$?
-    
-    if [ $MIGRATION_EXIT_CODE -eq 0 ]; then
-        echo ""
-        echo "✅ All migrations completed successfully!"
-    else
-        echo ""
-        echo "❌ Some migrations failed. Check the output above."
-        exit 1
-    fi
-else
-    # Running locally with SDK available
-    echo "✓ .NET SDK found locally"
-    echo "Running migrations from local machine..."
-    echo ""
-    
-    failed_services=()
-    
-    for service_config in "${SERVICES[@]}"; do
-        IFS=':' read -r migration_project startup_project db_name <<< "$service_config"
-        
-        if ! run_migrations_for_service "$migration_project" "$startup_project" "$db_name"; then
-            failed_services+=("$startup_project")
-        fi
-        echo ""
-    done
-    
-    echo "========================================="
-    echo "Migration Summary"
-    echo "========================================="
-    if [ ${#failed_services[@]} -eq 0 ]; then
-        echo "✅ All migrations completed successfully!"
-    else
-        echo "❌ Some migrations failed:"
-        printf '   - %s\n' "${failed_services[@]}"
-        exit 1
-    fi
+if [ -z "$SQLSERVER_CONTAINER" ]; then
+    echo -e "${RED}✗ SQL Server container not found${NC}"
+    echo "Make sure SQL Server is running: docker ps | grep sqlserver"
+    exit 1
 fi
 
-echo ""
-echo "========================================="
-echo "Verification"
-echo "========================================="
-echo ""
-echo "To verify tables were created, run:"
-echo "  docker exec \$(docker ps --filter 'name=sqlserver' --format '{{.ID}}' | head -n1) \\"
-echo "    /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P '$DB_PASSWORD' -C \\"
-echo "    -d <DATABASE_NAME> -Q \"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE';\""
+echo -e "${GREEN}✓ SQL Server container found: $SQLSERVER_CONTAINER${NC}"
 echo ""
 
+# Wait for SQL Server to be ready
+echo "Waiting for SQL Server to be ready..."
+for i in {1..30}; do
+    if docker exec $SQLSERVER_CONTAINER /opt/mssql-tools18/bin/sqlcmd \
+        -S localhost -U sa -P "$SA_PASSWORD" -C -Q "SELECT 1" > /dev/null 2>&1; then
+        echo -e "${GREEN}✓ SQL Server is ready${NC}"
+        break
+    fi
+    echo "  Attempt $i/30: Waiting for SQL Server..."
+    sleep 2
+done
+echo ""
 
+# Create databases
+echo "Step 1: Creating Databases"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+for db in "${DATABASES[@]}"; do
+    echo -n "Creating $db... "
+    
+    # Check if database already exists
+    db_exists=$(docker exec -i $SQLSERVER_CONTAINER /opt/mssql-tools18/bin/sqlcmd \
+        -S localhost -U sa -P "$SA_PASSWORD" -C -h -1 -W \
+        -Q "SELECT name FROM sys.databases WHERE name = '$db';" 2>/dev/null | tr -d '[:space:]')
+    
+    if [ "$db_exists" == "$db" ]; then
+        echo -e "${YELLOW}Already exists (skipping)${NC}"
+    else
+        # Create database
+        docker exec -i $SQLSERVER_CONTAINER /opt/mssql-tools18/bin/sqlcmd \
+            -S localhost -U sa -P "$SA_PASSWORD" -C \
+            -Q "CREATE DATABASE [$db];" > /dev/null 2>&1
+        
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}✓ Created successfully${NC}"
+        else
+            echo -e "${RED}✗ Failed to create${NC}"
+            exit 1
+        fi
+    fi
+done
+echo ""
+
+# Verify databases
+echo "Step 2: Verifying Databases"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+docker exec -i $SQLSERVER_CONTAINER /opt/mssql-tools18/bin/sqlcmd \
+    -S localhost -U sa -P "$SA_PASSWORD" -C \
+    -Q "SELECT name, create_date FROM sys.databases WHERE name IN ('PMS_Booking', 'PMS_Invoice', 'PMS_Site') ORDER BY name;"
+echo ""
+
+# Restart services to trigger migrations
+echo "Step 3: Restarting Services to Trigger Migrations"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+SERVICES=("pms-backend_booking-service" "pms-backend_invoice-service" "pms-backend_site-service")
+
+for service in "${SERVICES[@]}"; do
+    echo -n "Restarting $service... "
+    docker service update --force $service > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✓ Restarted${NC}"
+    else
+        echo -e "${RED}✗ Failed${NC}"
+    fi
+done
+echo ""
+
+# Wait for services to stabilize
+echo "Step 4: Waiting for Services to Start"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Waiting 30 seconds for services to initialize and run migrations..."
+for i in {30..1}; do
+    echo -ne "  $i seconds remaining...\r"
+    sleep 1
+done
+echo -e "${GREEN}✓ Wait complete${NC}                    "
+echo ""
+
+# Check service logs for migration activity
+echo "Step 5: Checking Migration Logs"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+for service in "${SERVICES[@]}"; do
+    service_name=$(echo $service | sed 's/pms-backend_//')
+    echo ""
+    echo -e "${BLUE}$service_name:${NC}"
+    echo "───────────────────────────────────────"
+    
+    # Get logs mentioning migration or database
+    logs=$(docker service logs $service --tail 20 2>/dev/null | grep -i -E "migration|database|ef core|entity framework" | tail -5 || echo "")
+    
+    if [ ! -z "$logs" ]; then
+        echo "$logs"
+    else
+        echo -e "${YELLOW}No migration logs found. Checking for errors...${NC}"
+        error_logs=$(docker service logs $service --tail 10 2>/dev/null | grep -i "error" | tail -3 || echo "")
+        if [ ! -z "$error_logs" ]; then
+            echo -e "${RED}Errors found:${NC}"
+            echo "$error_logs"
+        else
+            echo "No errors found in recent logs"
+        fi
+    fi
+done
+echo ""
+
+# Check database tables again
+echo "Step 6: Verifying Tables Created"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+for db in "${DATABASES[@]}"; do
+    echo ""
+    echo -e "${BLUE}$db:${NC}"
+    
+    table_count=$(docker exec -i $SQLSERVER_CONTAINER /opt/mssql-tools18/bin/sqlcmd \
+        -S localhost -U sa -P "$SA_PASSWORD" -C -d "$db" -h -1 -W \
+        -Q "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE';" 2>/dev/null | tr -d '[:space:]')
+    
+    if [ "$table_count" -gt "0" ]; then
+        echo -e "${GREEN}✓ $table_count tables found${NC}"
+        
+        # List tables
+        docker exec -i $SQLSERVER_CONTAINER /opt/mssql-tools18/bin/sqlcmd \
+            -S localhost -U sa -P "$SA_PASSWORD" -C -d "$db" -h -1 \
+            -Q "SELECT '  - ' + TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME;" 2>/dev/null | grep "^  -"
+        
+        # Check migration history
+        migration_count=$(docker exec -i $SQLSERVER_CONTAINER /opt/mssql-tools18/bin/sqlcmd \
+            -S localhost -U sa -P "$SA_PASSWORD" -C -d "$db" -h -1 -W \
+            -Q "SELECT COUNT(*) FROM __EFMigrationsHistory;" 2>/dev/null | tr -d '[:space:]')
+        
+        if [ ! -z "$migration_count" ] && [ "$migration_count" -gt "0" ]; then
+            echo -e "${GREEN}  ✓ $migration_count migrations applied${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠ No tables found - migrations may not have run${NC}"
+        echo "  Check service logs for errors"
+    fi
+done
+echo ""
+
+# Summary
+echo "========================================"
+echo "Summary"
+echo "========================================"
+echo ""
+echo -e "${GREEN}Databases created successfully!${NC}"
+echo ""
+echo "Next steps:"
+echo "  1. Check if migrations ran automatically (see table counts above)"
+echo "  2. If no tables exist, check service logs:"
+echo "     docker service logs pms-backend_booking-service --tail 50"
+echo ""
+echo "  3. To manually check a database:"
+echo "     docker exec -it $SQLSERVER_CONTAINER /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P '$SA_PASSWORD' -C -d PMS_Booking"
+echo ""
+echo "  4. To view service status:"
+echo "     docker service ps pms-backend_booking-service"
+echo ""
+
+# Check service health
+echo "Service Health Check:"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+for service in "${SERVICES[@]}"; do
+    replicas=$(docker service ls --format "{{.Name}} {{.Replicas}}" | grep $service | awk '{print $2}')
+    service_name=$(echo $service | sed 's/pms-backend_//')
+    echo "  $service_name: $replicas"
+done
+echo ""
