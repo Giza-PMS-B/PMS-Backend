@@ -10,11 +10,13 @@ namespace Booking.API.Controller
     public class BookingController : ControllerBase
     {
         private readonly TicketService _ticketService;
+        private readonly SiteService _siteService;
         private readonly ILogger<BookingController> _logger;
 
-        public BookingController(TicketService ticketService, ILogger<BookingController> logger)
+        public BookingController(TicketService ticketService, SiteService siteService, ILogger<BookingController> logger)
         {
             _ticketService = ticketService;
+            _siteService = siteService;
             _logger = logger;
         }
 
@@ -45,6 +47,23 @@ namespace Booking.API.Controller
             {
                 _logger.LogError(ex, "Failed to create ticket for site {SiteId}", createTicketDTO.SiteId);
                 throw;
+            }
+        }
+
+        [HttpGet("leaves")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetLeafSites()
+        {
+            try
+            {
+                var sites = await _siteService.GetLeafSites();
+                return Ok(sites);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { error = "An error occurred while retrieving leaf sites.", details = ex.Message });
             }
         }
     }

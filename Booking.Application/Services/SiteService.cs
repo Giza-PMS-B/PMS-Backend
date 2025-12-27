@@ -19,4 +19,28 @@ public class SiteService
     {
         throw new NotImplementedException();
     }
+    public async Task<List<SiteResponseDTO>> GetLeafSites()
+    {
+        var sites = _siteRepository.GetAll()
+            .Where(s => s.IsLeaf == true)
+            .ToList();
+        return sites.Select(s => MapToResponseDTO(s)).ToList();
+    }
+    private static SiteResponseDTO MapToResponseDTO(Model.Entities.Site site)
+    {
+        var dto = new SiteResponseDTO
+        {
+            Id = site.Id,
+            Path = site.Path,
+            NameEn = site.NameEn,
+            NameAr = site.NameAr,
+            PricePerHour = site.PricePerHour,
+            IntegrationCode = site.IntegrationCode,
+            NumberOfSolts = site.NumberOfSolts,
+            IsLeaf = site.IsLeaf,
+        };
+
+        return dto;
+    }
+
 }
