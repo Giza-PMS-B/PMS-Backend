@@ -21,11 +21,6 @@ public class SiteConfiguration : IEntityTypeConfiguration<Site>
         .IsRequired()
         .HasMaxLength(100);
 
-        builder.HasIndex(s => s.NameEn)
-       .IsUnique();
-
-        builder.HasIndex(s => s.NameAr)
-               .IsUnique();
 
         builder.Property(site => site.NumberOfSolts);
         builder.Property(site => site.Path).IsRequired();
