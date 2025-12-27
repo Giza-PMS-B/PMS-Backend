@@ -24,7 +24,7 @@ public class AppDbContext : DbContext
     {
         if (!optionsBuilder.IsConfigured)
         {
-            optionsBuilder.UseSqlServer("");
+            optionsBuilder.UseSqlServer("Server=pms-sqlserver,1433; Database=PMS_Site; User Id=sa; Password=YourStrong@Passw0rd; Encrypt=True; TrustServerCertificate=True; MultipleActiveResultSets=True;");
         }
 
     }

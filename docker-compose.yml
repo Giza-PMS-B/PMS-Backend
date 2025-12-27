@@ -146,6 +146,51 @@ services:
       Kafka__Consumer__GroupId: SiteServiceGroup
       ConnectionStrings__DefaultConnection: ${SITE_DB_CONNECTION}
 
+  # PostgreSQL Database for SonarQube
+  sonarqube-db:
+    image: postgres:15-alpine
+    container_name: pms-sonarqube-db
+    environment:
+      POSTGRES_USER: ${SONAR_DB_USER:-sonar}
+      POSTGRES_PASSWORD: ${SONAR_DB_PASSWORD:-sonar}
+      POSTGRES_DB: ${SONAR_DB_NAME:-sonar}
+    volumes:
+      - sonarqube_db:/var/lib/postgresql/data
+    networks:
+      - pms-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SONAR_DB_USER:-sonar}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # SonarQube Code Quality Platform
+  sonarqube:
+    image: sonarqube:10.3-community
+    container_name: pms-sonarqube
+    depends_on:
+      sonarqube-db:
+        condition: service_healthy
+    ports:
+      - "${SONARQUBE_PORT:-9000}:9000"
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://sonarqube-db:5432/${SONAR_DB_NAME:-sonar}
+      SONAR_JDBC_USERNAME: ${SONAR_DB_USER:-sonar}
+      SONAR_JDBC_PASSWORD: ${SONAR_DB_PASSWORD:-sonar}
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: 'true'
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    networks:
+      - pms-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9000/api/system/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
 networks:
   pms-network:
     driver: bridge
@@ -160,3 +205,11 @@ volumes:
     name: pms_kafka_data
   new_sql_data:
     name: pms_new_sql_data
+  sonarqube_db:
+    name: pms_sonarqube_db
+  sonarqube_data:
+    name: pms_sonarqube_data
+  sonarqube_extensions:
+    name: pms_sonarqube_extensions
+  sonarqube_logs:
+    name: pms_sonarqube_logs
