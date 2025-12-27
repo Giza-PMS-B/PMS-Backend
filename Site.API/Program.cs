@@ -37,7 +37,7 @@ public class Program
         // Add Serilog logging
         builder.AddSerilogLogging();
 
-        // Add services to the container.
+        
         builder.Services.AddAuthorization();
         builder.Services.AddControllers();
 
@@ -57,7 +57,6 @@ public class Program
             options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
         });
 
-        // Register DbContext to resolve to AppDbContext
         builder.Services.AddScoped<IUOW, UOW>();
         builder.Services.AddScoped<DbContext>(provider => provider.GetRequiredService<AppDbContext>());
         builder.Services.AddScoped(typeof(IRepo<Model.Entities.Site>), typeof(Repo<Model.Entities.Site>));
@@ -80,7 +79,7 @@ public class Program
 
         var app = builder.Build();
 
-        // 🔹 Apply migrations automatically
+        // Apply migrations automatically
         using (var scope = app.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -93,6 +92,7 @@ public class Program
             app.UseSwagger();
             app.UseSwaggerUI();
         }
+
         app.UseCors("AllowAll");
         // Add logging middleware
         app.UseSharedKernelLogging();

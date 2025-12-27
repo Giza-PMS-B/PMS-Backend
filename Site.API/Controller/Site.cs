@@ -17,26 +17,13 @@ namespace Site.API.Controller
             _siteService = siteService;
         }
 
-        /// <summary>
-        /// Health check endpoint to verify Site API is running
-        /// </summary>
-        /// <returns>Status message</returns>
         [HttpGet]
-        [ProducesResponseType(StatusCodes.Status200OK)]
         public IActionResult CheckHealth()
         {
             return Ok("Site API is running");
         }
 
-        /// <summary>
-        /// Add a new parent site (Main path for parking area)
-        /// </summary>
-        /// <param name="createSiteDTO">Parent site details</param>
-        /// <returns>Created site details</returns>
         [HttpPost("add/parent")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> AddParentSite([FromBody] CreateSiteDTO createSiteDTO)
         {
             try
@@ -55,15 +42,7 @@ namespace Site.API.Controller
             }
         }
 
-        /// <summary>
-        /// Add a new leaf site (Available parking area slots as child below the parent site)
-        /// </summary>
-        /// <param name="createLeafSiteDTO">Leaf site details including polygons</param>
-        /// <returns>Created leaf site details</returns>
         [HttpPost("add/leaf")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> AddLeafSite([FromBody] CreateLeafSiteDTO createLeafSiteDTO)
         {
             try
@@ -82,13 +61,7 @@ namespace Site.API.Controller
             }
         }
 
-        /// <summary>
-        /// Get all root-level sites (sites without parents)
-        /// </summary>
-        /// <returns>List of root sites</returns>
         [HttpGet("roots")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetRootSites()
         {
             try
@@ -103,13 +76,7 @@ namespace Site.API.Controller
             }
         }
 
-        /// <summary>
-        /// Get all leaf sites (final level parking areas)
-        /// </summary>
-        /// <returns>List of leaf sites</returns>
         [HttpGet("leaves")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetLeafSites()
         {
             try
@@ -124,15 +91,7 @@ namespace Site.API.Controller
             }
         }
 
-        /// <summary>
-        /// Get all child sites of a specific parent site
-        /// </summary>
-        /// <param name="parentId">Parent site GUID</param>
-        /// <returns>List of child sites</returns>
         [HttpGet("children/{parentId}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetChildSites([FromRoute] Guid parentId)
         {
             try
