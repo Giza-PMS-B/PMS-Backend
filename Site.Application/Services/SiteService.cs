@@ -63,7 +63,7 @@ public class SiteService
     public async Task<SiteResponseDTO> CreateParentSiteAsync(CreateSiteDTO dto)
     {
 
-        ValidateSiteNameUniqueness(dto.NameEn, dto.NameAr);
+        ValidateSiteNameUniqueness(dto.NameEn, dto.NameAr, dto.ParentId);
 
         _logger.LogInformation("start Creating parent site {SiteName} at path {Path}", dto.NameEn, dto.Path);
 
@@ -106,7 +106,7 @@ public class SiteService
 
     public async Task<SiteResponseDTO> CreateLeafSiteAsync(CreateLeafSiteDTO dto)
     {
-        ValidateSiteNameUniqueness(dto.NameEn, dto.NameAr);
+        ValidateSiteNameUniqueness(dto.NameEn, dto.NameAr, dto.ParentId);
         ValidateIntegrationCodeUniqueness(dto.IntegrationCode);
 
 
@@ -161,20 +161,34 @@ public class SiteService
         return leafSite;
     }
 
-    private void ValidateSiteNameUniqueness(string nameEn, string nameAr)
+    private void ValidateSiteNameUniqueness(string nameEn, string nameAr, Guid? parentId)
     {
-        var existingByNameEn = _siteRepository.GetAll()
-            .FirstOrDefault(s => s.NameEn.ToLower() == nameEn.ToLower());
+        var query = _siteRepository.GetAll();
 
-        if (existingByNameEn != null)
-            throw new ValidationException("The site name is already existed");
+        nameEn = nameEn.ToLower();
+        nameAr = nameAr.ToLower();
 
-        var existingByNameAr = _siteRepository.GetAll()
-            .FirstOrDefault(s => s.NameAr.ToLower() == nameAr.ToLower());
+        // Check siblings at the same level (same ParentId)
+        var existsAtSameLevel = query.Any(s =>
+            s.ParentId == parentId &&
+            (s.NameEn.ToLower() == nameEn || s.NameAr.ToLower() == nameAr));
 
-        if (existingByNameAr != null)
-            throw new ValidationException("The site name is already existed");
+        if (existsAtSameLevel)
+            throw new ValidationException("A site with the same name already exists at this level");
+
+        // Check against parent name (if not root)
+        if (parentId.HasValue)
+        {
+            var parent = query.FirstOrDefault(s => s.Id == parentId.Value);
+
+            if (parent != null &&
+                (parent.NameEn.ToLower() == nameEn || parent.NameAr.ToLower() == nameAr))
+            {
+                throw new ValidationException("Site name cannot be the same as its parent name");
+            }
+        }
     }
+
 
     private void ValidateIntegrationCodeUniqueness(string integrationCode)
     {

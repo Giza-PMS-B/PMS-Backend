@@ -22,12 +22,6 @@ public class SiteConfiguration : IEntityTypeConfiguration<Model.Entities.Site>
         .IsRequired()
         .HasMaxLength(100);
 
-        builder.HasIndex(s => s.NameEn)
-       .IsUnique();
-
-        builder.HasIndex(s => s.NameAr)
-               .IsUnique();
-
         builder.Property(site => site.NumberOfSolts);
         builder.Property(site => site.PricePerHour)
         .HasColumnType("decimal(18,2)");
