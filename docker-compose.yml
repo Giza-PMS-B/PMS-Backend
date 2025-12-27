@@ -2,11 +2,15 @@
 x-dotnet-environment: &dotnet-environment
   ASPNETCORE_ENVIRONMENT: ${ENVIRONMENT:-Development}
   ASPNETCORE_HTTP_PORTS: 8080
-  Kafka__BootstrapServers: kafka:9092
-  Kafka__Producer__Acks: ${KAFKA_PRODUCER_ACKS:-all}
-  Kafka__Producer__MessageTimeoutMs: ${KAFKA_PRODUCER_MESSAGE_TIMEOUT_MS:-30000}
-  Kafka__Consumer__EnableAutoCommit: ${KAFKA_CONSUMER_ENABLE_AUTO_COMMIT:-false}
-  Kafka__Consumer__AutoOffsetReset: ${KAFKA_CONSUMER_AUTO_OFFSET_RESET:-earliest}
+
+  #Kafka Configuration
+  Kafka__BootstrapServers: ${Kafka__BootstrapServers}
+  Kafka__ClientId: ${Kafka__ClientId}
+  Kafka__Producer__Acks: ${Kafka__Producer__Acks}
+  Kafka__Producer__MessageTimeoutMs: ${Kafka__Producer__MessageTimeoutMs}
+  Kafka__Consumer__GroupId: ${Kafka__Consumer__GroupId}
+  Kafka__Consumer__EnableAutoCommit: ${Kafka__Consumer__EnableAutoCommit}
+  Kafka__Consumer__AutoOffsetReset: ${Kafka__Consumer__AutoOffsetReset}
 
 # Shared service dependencies
 x-dotnet-service: &dotnet-service

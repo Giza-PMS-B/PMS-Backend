@@ -70,21 +70,8 @@ public class Program
 
         builder.Services.AddKafkaBroker(options =>
         {
-            options.BootstrapServers = builder.Configuration["Kafka:BootstrapServers"] ?? "localhost:9092";
-            options.ClientId = builder.Configuration["Kafka:ClientId"] ?? "SiteService";
-            options.Producer = new SharedKernel.MessageBus.Kafka.Configurations.ProducerOptions
-            {
-                Acks = Confluent.Kafka.Acks.All,
-                MessageTimeoutMs = 30000
-            };
-            options.Consumer = new SharedKernel.MessageBus.Kafka.Configurations.ConsumerOptions
-            {
-                GroupId = builder.Configuration["Kafka:Consumer:GroupId"] ?? "SiteServiceGroup",
-                EnableAutoCommit = false,
-                AutoOffsetReset = Confluent.Kafka.AutoOffsetReset.Earliest
-            };
+            builder.Configuration.GetSection("Kafka").Bind(options);
         });
-
 
         builder.Services.AddSingleton<IMessagePublisher, KafkaMessagePublisher>();
         builder.Services.AddSingleton<IMessageNameResolver, DefaultMessageNameResolver>();
