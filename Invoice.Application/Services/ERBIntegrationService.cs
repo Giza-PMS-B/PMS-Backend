@@ -2,13 +2,18 @@ using System;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json;
 using Invoice.Application.DTO;
 
 namespace Invoice.Application.Services;
 
 public static class ERBIntegrationService
 {
-    private const string BaseUrl = "http://localhost:8080/api";
+    private const string BaseUrl = "http://localhost:5230";
+    private static readonly HttpClient _httpClient = new HttpClient
+    {
+        BaseAddress = new Uri(BaseUrl)
+    };
 
     public static async Task SendInvoiceToErpAsync(InvoiceERBDTO dto)
     {
@@ -17,63 +22,58 @@ public static class ERBIntegrationService
         await SendInvoice(dto, token);
     }
 
-    private static async Task<string> LoginAndGetTokenAsync(string username, string password)
+    private static async Task<string> LoginAndGetTokenAsync(string email, string password)
     {
-        using var client = new HttpClient();
-
-        var loginRequest = new ERBLoginRequest
+        var loginPayload = new
         {
-            Username = username,
-            Password = password
+            email,
+            password
         };
 
-        var response = await client.PostAsJsonAsync(
-            $"{BaseUrl}/auth/login",
-            loginRequest);
+        var json = JsonSerializer.Serialize(loginPayload);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
 
+        var response = await _httpClient.PostAsync("/Auth/login", content);
         response.EnsureSuccessStatusCode();
 
-        var loginResponse = await response.Content.ReadFromJsonAsync<ERBLoginResponse>();
+        var responseJson = await response.Content.ReadAsStringAsync();
 
-        return loginResponse!.Token;
+        using var doc = JsonDocument.Parse(responseJson);
+        if (!doc.RootElement.TryGetProperty("token", out var tokenElement))
+            throw new Exception("Token not found in login response.");
+
+        return tokenElement.GetString()!;
     }
 
     private static async Task SendInvoice(
     InvoiceERBDTO dto,
     string jwtToken)
     {
-        using var client = new HttpClient();
+        var erpRequest = new
+        {
+            InvoiceHTMLDocument = dto.InvoiceHTMLDoc,
+            InvoiceId = dto.InvoiceId,
+            TicketId = dto.TicketId,
+            TicketSerial = dto.TicketSerial,
+            FromDate = dto.BookingFrom,
+            ToDate = dto.BookingTo,
+            PlateNumber = dto.PlateNumber,
+            TotalAmountWithOutTax = dto.TotalAmountBeforeTax,
+            TaxAmount = dto.TotalAmountAfterTax - dto.TotalAmountBeforeTax
+        };
 
-        client.DefaultRequestHeaders.Authorization =
+        var json = JsonSerializer.Serialize(erpRequest);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "/Invoice")
+        {
+            Content = content
+        };
+        request.Headers.Authorization =
             new AuthenticationHeaderValue("Bearer", jwtToken);
 
-        using var form = new MultipartFormDataContent();
-
-        form.Add(new StringContent(dto.InvoiceId.ToString()), "invoiceId");
-        form.Add(new StringContent(dto.TicketId.ToString()), "ticketId");
-        form.Add(new StringContent(dto.TicketSerial), "ticketSerial");
-        form.Add(new StringContent(dto.BookingFrom.ToString("O")), "from");
-        form.Add(new StringContent(dto.BookingTo.ToString("O")), "to");
-        form.Add(new StringContent(dto.NumOfHours.ToString()), "numberOfHours");
-        form.Add(new StringContent(dto.PlateNumber), "licensePlate");
-        form.Add(new StringContent(dto.TotalAmountBeforeTax.ToString()), "amountWithoutTax");
-
-        var tax = dto.TotalAmountAfterTax - dto.TotalAmountBeforeTax;
-        form.Add(new StringContent(tax.ToString()), "taxAmount");
-
-        form.Add(new StringContent(dto.TotalAmountAfterTax.ToString()), "amount");
-
-        //make html as a fille
-        var htmlBytes = Encoding.UTF8.GetBytes(dto.InvoiceHTMLDoc);
-        var fileContent = new ByteArrayContent(htmlBytes);
-        fileContent.Headers.ContentType = new MediaTypeHeaderValue("text/html");
-
-        form.Add(fileContent, "invoiceDoc", $"invoice_{dto.InvoiceId}.html");
-
-        var response = await client.PostAsync(
-            $"{BaseUrl}/invoices",
-            form);
-
+        var response = await _httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
     }
+
 }
