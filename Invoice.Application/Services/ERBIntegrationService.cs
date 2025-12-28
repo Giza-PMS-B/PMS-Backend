@@ -9,7 +9,7 @@ namespace Invoice.Application.Services;
 
 public static class ERBIntegrationService
 {
-    private const string BaseUrl = "http://localhost:5230";
+    private const string BaseUrl = "http://host.docker.internal:5230";
     private static readonly HttpClient _httpClient = new HttpClient
     {
         BaseAddress = new Uri(BaseUrl)
@@ -18,7 +18,7 @@ public static class ERBIntegrationService
     public static async Task SendInvoiceToErpAsync(InvoiceERBDTO dto)
     {
         var token = await LoginAndGetTokenAsync("admin@gmail.com", "root");
-
+        Console.WriteLine("Token" + token);
         await SendInvoice(dto, token);
     }
 
@@ -34,7 +34,13 @@ public static class ERBIntegrationService
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         var response = await _httpClient.PostAsync("/Auth/login", content);
-        response.EnsureSuccessStatusCode();
+        
+        //response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var errormess = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"{errormess}  ---- {response.StatusCode}");
+        }
 
         var responseJson = await response.Content.ReadAsStringAsync();
 
@@ -73,7 +79,12 @@ public static class ERBIntegrationService
             new AuthenticationHeaderValue("Bearer", jwtToken);
 
         var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
+        //response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var errormess=await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"{errormess}  ---- {response.StatusCode}" );
+        }
     }
 
 }
